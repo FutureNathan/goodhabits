@@ -33,8 +33,8 @@ when you finish them for the day. No account, no tracking, no servers.
     order you flip through them.
   - Delete a habit, with a confirmation step so you never lose one by accident.
   - Switch years with the `‹ 2026 ›` control (plus a "This year" shortcut).
-  - Toggle the calendar direction, and lock past days from editing (so you
-    only check off today).
+  - Toggle the calendar direction, lock past days from editing (so you only
+    check off today), and set your **time zone** so "today" is always correct.
   - **Download a backup** of all your habits and history, and **restore** one
     later — handy for moving between devices or browsers.
   - An **About** section with credits and a link to this open-source repo.

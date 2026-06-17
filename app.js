@@ -32,6 +32,7 @@
   const newHabitInput = el("newHabitInput");
   const orientToggle = el("orientToggle");
   const pastToggle = el("pastToggle");
+  const tzSelect = el("tzSelect");
   const confettiCanvas = el("confetti");
 
   // ---------- Date helpers ----------
@@ -40,14 +41,38 @@
   const fmtDate = (d) => fmt(d.getFullYear(), d.getMonth(), d.getDate());
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
 
-  const now = new Date();
-  const todayStr = fmt(now.getFullYear(), now.getMonth(), now.getDate());
+  // "Today" is computed in the active time zone so dates stay correct.
+  const deviceTz = (function () {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) { return "UTC"; }
+  })();
+  function computeToday(tz) {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    } catch (e) {
+      const d = new Date();
+      return fmt(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+  }
+  function addDays(dateStr, delta) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+  }
+  let todayStr = computeToday(deviceTz);
+  let todayYear = Number(todayStr.slice(0, 4));
+  const activeTz = () => (!state || !state.timezone || state.timezone === "auto" ? deviceTz : state.timezone);
+  function refreshToday() {
+    todayStr = computeToday(activeTz());
+    todayYear = Number(todayStr.slice(0, 4));
+  }
 
   const defaultOrientation = () =>
     window.innerWidth >= window.innerHeight ? "horizontal" : "vertical";
 
   // ---------- State ----------
   let state = load();
+  refreshToday();
   let wasComplete = isAllCompleteToday();
 
   function defaultState() {
@@ -58,9 +83,10 @@
         { id: uid(), name: "Drink water", days: {} },
       ],
       currentIndex: 0,
-      year: now.getFullYear(),
+      year: todayYear,
       orientation: defaultOrientation(),
       editPast: true,
+      timezone: "auto",
     };
   }
 
@@ -74,12 +100,13 @@
         if (!h.id) h.id = uid();
         if (!h.days || typeof h.days !== "object") h.days = {};
       });
-      data.year = data.year || now.getFullYear();
+      data.year = data.year || todayYear;
       data.currentIndex = clampIndex(data.currentIndex || 0, data.habits.length);
       data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
         ? data.orientation
         : defaultOrientation();
       data.editPast = data.editPast !== false; // default on
+      data.timezone = typeof data.timezone === "string" ? data.timezone : "auto";
       return data;
     } catch (e) {
       return defaultState();
@@ -115,12 +142,12 @@
   // Consecutive completed days ending today (or yesterday, so an unlogged
   // "today" doesn't look like a broken streak before you've checked in).
   function currentStreak(habit) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (!habit.days[fmtDate(d)]) d.setDate(d.getDate() - 1);
+    let cur = todayStr;
+    if (!habit.days[cur]) cur = addDays(cur, -1);
     let streak = 0;
-    while (habit.days[fmtDate(d)]) {
+    while (habit.days[cur]) {
       streak++;
-      d.setDate(d.getDate() - 1);
+      cur = addDays(cur, -1);
     }
     return streak;
   }
@@ -313,8 +340,8 @@
   }
 
   function goToThisYear() {
-    if (state.year !== now.getFullYear()) {
-      state.year = now.getFullYear();
+    if (state.year !== todayYear) {
+      state.year = todayYear;
       save();
       renderAll();
       if (!adminPanel.hidden) renderHabitList();
@@ -348,11 +375,43 @@
     pastToggle.setAttribute("aria-checked", state.editPast ? "true" : "false");
   }
 
+  // ---------- Time zone ----------
+  const FALLBACK_TZS = [
+    "UTC", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York",
+    "America/Sao_Paulo", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+    "Africa/Cairo", "Asia/Dubai", "Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo",
+    "Australia/Sydney", "Pacific/Auckland",
+  ];
+  function populateTimezones() {
+    if (!tzSelect) return;
+    let zones = [];
+    try { if (typeof Intl.supportedValuesOf === "function") zones = Intl.supportedValuesOf("timeZone"); } catch (e) {}
+    if (!zones || !zones.length) zones = FALLBACK_TZS;
+    let html = `<option value="auto">Auto — ${deviceTz.replace(/_/g, " ")}</option>`;
+    for (const z of zones) html += `<option value="${z}">${z.replace(/_/g, " ")}</option>`;
+    tzSelect.innerHTML = html;
+    syncTimezone(zones);
+  }
+  function syncTimezone(zones) {
+    if (!tzSelect) return;
+    const cur = state.timezone || "auto";
+    const list = zones || [...tzSelect.options].map((o) => o.value);
+    tzSelect.value = cur !== "auto" && list.indexOf(cur) !== -1 ? cur : "auto";
+  }
+  function setTimezone(tz) {
+    state.timezone = tz || "auto";
+    save();
+    refreshToday();
+    renderAll();
+    if (!adminPanel.hidden) renderHabitList();
+  }
+
   // ---------- Settings / admin panel ----------
   function openAdmin() {
     renderHabitList();
     syncOrientToggle();
     syncPastToggle();
+    syncTimezone();
     adminOverlay.hidden = false;
     adminPanel.hidden = false;
   }
@@ -571,17 +630,19 @@
           if (!h.id) h.id = uid();
           if (!h.days || typeof h.days !== "object") h.days = {};
         });
-        data.year = data.year || now.getFullYear();
+        data.year = data.year || todayYear;
         data.currentIndex = clampIndex(data.currentIndex || 0, data.habits.length);
         data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
           ? data.orientation : defaultOrientation();
         data.editPast = data.editPast !== false;
+        data.timezone = typeof data.timezone === "string" ? data.timezone : "auto";
         state = data;
+        refreshToday();
         wasComplete = isAllCompleteToday();
         save();
         renderAll();
         renderHabitList();
-        scrollToToday();
+        syncTimezone();
       } catch (err) {
         alert("Sorry — that file couldn't be read as a Good Habits backup.");
       }
@@ -648,7 +709,7 @@
 
   // ---------- Scroll to today ----------
   function scrollToToday() {
-    if (state.year !== now.getFullYear()) return;
+    if (state.year !== todayYear) return;
     const target = calendar.querySelector(`.star[data-date="${todayStr}"]`);
     if (target) target.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
   }
@@ -718,6 +779,7 @@
     if (btn) setOrientation(btn.dataset.orient);
   });
   pastToggle.addEventListener("click", () => setEditPast(!state.editPast));
+  if (tzSelect) tzSelect.addEventListener("change", (e) => setTimezone(e.target.value));
 
   el("exportBtn").addEventListener("click", exportData);
   el("importBtn").addEventListener("click", () => el("importFile").click());
@@ -746,7 +808,10 @@
 
   // ---------- Init ----------
   buildStarfield();
+  populateTimezones();
   renderAll();
-  scrollToToday();
+  // Start scrolled to the top so the month/day headers are visible on landing.
+  calendarArea.scrollTop = 0;
+  calendarArea.scrollLeft = 0;
   maybeShowIntro();
 })();

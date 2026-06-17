@@ -51,16 +51,15 @@ python3 -m http.server 8000
 
 then open the printed URL.
 
-**Or host it anywhere static** — GitHub Pages, Netlify, Vercel, etc. Push this
-folder and point the host at `index.html`.
+**Or host it anywhere static** — Vercel, Netlify, GitHub Pages, etc. It's just
+static files, so no build step or framework preset is needed.
 
-> **Hosting / sharing:** this is set up for the custom domain
-> **`habit.nathantowianski.com`** — the `CNAME` file and the absolute Open
-> Graph / Twitter URLs in `index.html` all point there, so links unfurl nicely
-> in iMessage, Slack, etc. To deploy: enable GitHub Pages on the `main` branch
-> and add a DNS `CNAME` record for `habit` → `futurenathan.github.io`. If you
-> move hosts, update the `CNAME` file and the `og:`/`twitter:` URLs in
-> `index.html`.
+> **Hosting on Vercel:** import the repo as a static project (Framework preset:
+> *Other*, no build command, output = repo root) and add the custom domain
+> **`habit.nathantowianski.com`** in the Vercel dashboard. Vercel automatically
+> serves `404.html` for unknown routes. The absolute Open Graph / Twitter URLs
+> and canonical link in `index.html` point at that domain so links unfurl
+> nicely in iMessage, Slack, etc. — update them if you change domains.
 
 ## Files
 
@@ -69,6 +68,7 @@ folder and point the host at `index.html`.
 | `index.html` | Page structure + share/meta tags |
 | `styles.css` | All styling and animations |
 | `app.js` | App logic and local storage (no frameworks) |
+| `404.html` | On-brand not-found page (served automatically by Vercel) |
 | `favicon.svg`, `apple-touch-icon.png` | Icons |
 | `og-image.png` | Social share image |
 

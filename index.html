@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <meta name="description" content="A simple, beautiful habit tracker. Light up a star for every day you keep a habit. Saved right in your browser — no account needed." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Good Habits" />
+  <title>Good Habits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AD%90%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="nav-arrow" id="prevHabit" aria-label="Previous habit" title="Previous habit">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+
+      <div class="topbar-center">
+        <div class="app-title">Good Habits</div>
+        <button class="habit-name" id="habitName" title="Rename this habit">New habit</button>
+        <div class="habit-meta">
+          <button class="year-btn" id="prevYear" aria-label="Previous year">&#8249;</button>
+          <span id="yearLabel">2026</span>
+          <button class="year-btn" id="nextYear" aria-label="Next year">&#8250;</button>
+          <span class="dot-sep">•</span>
+          <span id="habitCount">1 / 1</span>
+          <span class="dot-sep">•</span>
+          <span id="habitTotal">0 days</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Daily progress ring -->
+        <button class="ring-wrap" id="ringWrap" title="Today's progress">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3dd6ff"/>
+                <stop offset="100%" stop-color="#4f7cff"/>
+              </linearGradient>
+              <linearGradient id="ringGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffe87a"/>
+                <stop offset="50%" stop-color="#ffc73a"/>
+                <stop offset="100%" stop-color="#ff9d00"/>
+              </linearGradient>
+            </defs>
+            <circle class="ring-track" cx="60" cy="60" r="52"/>
+            <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="ring-label" id="ringLabel">0/0</div>
+        </button>
+        <button class="icon-btn" id="openAdmin" aria-label="Manage habits" title="Manage habits">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <button class="nav-arrow" id="nextHabit" aria-label="Next habit" title="Next habit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Calendar -->
+    <main class="calendar-area">
+      <div class="calendar-scroll" id="calendarScroll">
+        <div class="calendar" id="calendar"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState" hidden>
+        <div class="empty-star">⭐</div>
+        <h2>No habits yet</h2>
+        <p>Create your first habit and start lighting up stars.</p>
+        <button class="primary-btn" id="emptyAddBtn">Add a habit</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Admin panel -->
+  <div class="overlay" id="adminOverlay" hidden></div>
+  <aside class="admin-panel" id="adminPanel" hidden aria-label="Manage habits">
+    <div class="admin-header">
+      <h2>Manage habits</h2>
+      <button class="icon-btn close-btn" id="closeAdmin" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="admin-add">
+      <input type="text" id="newHabitInput" placeholder="New habit name…" maxlength="60" />
+      <button class="primary-btn" id="addHabitBtn">Add</button>
+    </div>
+
+    <ul class="habit-list" id="habitList"></ul>
+
+    <p class="admin-tip">Tip: drag the handle (or use the arrows) to reorder. Your habits save automatically in this browser.</p>
+  </aside>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <script src="app.js"></script>
+</body>
+</html>

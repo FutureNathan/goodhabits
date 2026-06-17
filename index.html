@@ -42,30 +42,33 @@
   <div class="starfield" id="starfield" aria-hidden="true"></div>
 
   <div id="app">
-    <!-- Top bar: progress ring + settings -->
+    <!-- Top bar: habit title (centered) with the progress ring + settings aligned on the same row -->
     <header class="topbar">
-      <button class="ring-wrap" id="ringWrap" title="Today's progress — tap to jump to today">
-        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="ring-track" cx="60" cy="60" r="52"/>
-          <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"/>
-        </svg>
-        <div class="ring-label" id="ringLabel">0/0</div>
-      </button>
-      <button class="icon-btn" id="openAdmin" aria-label="Settings & habits" title="Settings & habits">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      </button>
-    </header>
+      <div class="top-spacer" aria-hidden="true"></div>
 
-    <!-- Big habit title with navigation -->
-    <section class="habit-bar">
-      <button class="nav-arrow" id="prevHabit" aria-label="Previous habit" title="Previous habit">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <h1 class="habit-name" id="habitName" title="Tap to rename or manage">New habit</h1>
-      <button class="nav-arrow" id="nextHabit" aria-label="Next habit" title="Next habit">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </section>
+      <div class="habit-bar">
+        <button class="nav-arrow" id="prevHabit" aria-label="Previous habit" title="Previous habit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h1 class="habit-name" id="habitName" title="Tap to rename or manage">New habit</h1>
+        <button class="nav-arrow" id="nextHabit" aria-label="Next habit" title="Next habit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="ring-wrap" id="ringWrap" title="Today's progress — tap to jump to today">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="ring-track" cx="60" cy="60" r="52"/>
+            <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="ring-label" id="ringLabel">0/0</div>
+        </button>
+        <button class="icon-btn" id="openAdmin" aria-label="Settings & habits" title="Settings & habits">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
 
     <!-- Stats, centered under the title -->
     <div class="stats-row" id="statsRow">
@@ -75,7 +78,7 @@
       </div>
       <div class="stat">
         <span class="stat-value" id="statDays">0</span>
-        <span class="stat-label">Days in <span id="statYear">2026</span></span>
+        <span class="stat-label">Completed in <span id="statYear">2026</span></span>
       </div>
       <div class="stat">
         <span class="stat-value" id="statStreak">0</span>

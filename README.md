@@ -54,11 +54,13 @@ then open the printed URL.
 **Or host it anywhere static** — GitHub Pages, Netlify, Vercel, etc. Push this
 folder and point the host at `index.html`.
 
-> **Sharing / link previews:** `index.html` includes Open Graph + Twitter tags
-> and an on-brand `og-image.png` so links unfurl nicely in iMessage, Slack, etc.
-> Those tags use **absolute URLs** pointing at `futurenathan.github.io/goodhabits`.
-> If you host elsewhere (e.g. a custom domain), update the `og:url`/`og:image`
-> and `twitter:image` values in `index.html` to your real domain.
+> **Hosting / sharing:** this is set up for the custom domain
+> **`habit.nathantowianski.com`** — the `CNAME` file and the absolute Open
+> Graph / Twitter URLs in `index.html` all point there, so links unfurl nicely
+> in iMessage, Slack, etc. To deploy: enable GitHub Pages on the `main` branch
+> and add a DNS `CNAME` record for `habit` → `futurenathan.github.io`. If you
+> move hosts, update the `CNAME` file and the `og:`/`twitter:` URLs in
+> `index.html`.
 
 ## Files
 

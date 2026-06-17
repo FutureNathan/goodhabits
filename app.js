@@ -7,15 +7,16 @@
   "use strict";
 
   const STORAGE_KEY = "goodhabits.v1";
+  const INTRO_KEY = "goodhabits.introSeen.v1";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const RING_C = 2 * Math.PI * 52; // circumference of the progress ring
+  const RING_C = 2 * Math.PI * 52;
 
   // ---------- DOM ----------
   const el = (id) => document.getElementById(id);
   const calendar = el("calendar");
-  const calendarScroll = el("calendarScroll");
+  const calendarArea = el("calendarArea");
   const emptyState = el("emptyState");
-  const infoRail = el("infoRail");
+  const statsRow = el("statsRow");
   const habitNameBtn = el("habitName");
   const statHabit = el("statHabit");
   const statDays = el("statDays");
@@ -29,6 +30,7 @@
   const adminOverlay = el("adminOverlay");
   const habitList = el("habitList");
   const newHabitInput = el("newHabitInput");
+  const orientToggle = el("orientToggle");
   const confettiCanvas = el("confetti");
 
   // ---------- Date helpers ----------
@@ -39,6 +41,9 @@
 
   const now = new Date();
   const todayStr = fmt(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const defaultOrientation = () =>
+    window.innerWidth >= window.innerHeight ? "horizontal" : "vertical";
 
   // ---------- State ----------
   let state = load();
@@ -53,6 +58,7 @@
       ],
       currentIndex: 0,
       year: now.getFullYear(),
+      orientation: defaultOrientation(),
     };
   }
 
@@ -68,6 +74,9 @@
       });
       data.year = data.year || now.getFullYear();
       data.currentIndex = clampIndex(data.currentIndex || 0, data.habits.length);
+      data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
+        ? data.orientation
+        : defaultOrientation();
       return data;
     } catch (e) {
       return defaultState();
@@ -96,9 +105,7 @@
   function countDays(habit, year) {
     const prefix = year + "-";
     let n = 0;
-    for (const k in habit.days) {
-      if (habit.days[k] && k.startsWith(prefix)) n++;
-    }
+    for (const k in habit.days) if (habit.days[k] && k.startsWith(prefix)) n++;
     return n;
   }
 
@@ -125,12 +132,13 @@
     state.currentIndex = clampIndex(state.currentIndex, state.habits.length);
     const has = state.habits.length > 0;
     emptyState.hidden = has;
-    calendarScroll.style.display = has ? "" : "none";
-    infoRail.style.display = has ? "" : "none";
+    calendar.style.display = has ? "" : "none";
+    statsRow.style.display = has ? "" : "none";
 
     renderHeader();
     renderCalendar();
     updateRing(false);
+    syncOrientToggle();
   }
 
   function renderHeader() {
@@ -159,50 +167,54 @@
     el("nextHabit").disabled = total <= 1;
   }
 
+  function makeCell(cls, text) {
+    const c = document.createElement("div");
+    c.className = cls;
+    if (text != null) c.textContent = text;
+    return c;
+  }
+
+  function makeStar(habit, dateStr, label) {
+    const star = document.createElement("button");
+    star.className = "star";
+    star.type = "button";
+    star.dataset.date = dateStr;
+    star.setAttribute("aria-label", label);
+    if (habit.days[dateStr]) star.classList.add("done");
+    if (dateStr === todayStr) star.classList.add("today");
+    return star;
+  }
+
   function renderCalendar() {
     const habit = currentHabit();
+    calendar.className = "calendar " + state.orientation;
     calendar.innerHTML = "";
     if (!habit) return;
 
     const frag = document.createDocumentFragment();
+    frag.appendChild(makeCell("cal-corner"));
 
-    // Header row: corner + month names
-    const corner = document.createElement("div");
-    corner.className = "cal-corner";
-    frag.appendChild(corner);
-    MONTHS.forEach((m) => {
-      const h = document.createElement("div");
-      h.className = "month-head";
-      h.textContent = m;
-      frag.appendChild(h);
-    });
-
-    // Day rows
-    for (let d = 1; d <= 31; d++) {
-      const label = document.createElement("div");
-      label.className = "day-label";
-      label.textContent = d;
-      frag.appendChild(label);
-
-      for (let m = 0; m < 12; m++) {
-        if (d > daysInMonth(state.year, m)) {
-          const ph = document.createElement("div");
-          ph.className = "star empty";
-          frag.appendChild(ph);
-          continue;
+    if (state.orientation === "vertical") {
+      // Months across the top, days down the side.
+      MONTHS.forEach((m) => frag.appendChild(makeCell("col-head", m)));
+      for (let d = 1; d <= 31; d++) {
+        frag.appendChild(makeCell("row-head", d));
+        for (let m = 0; m < 12; m++) {
+          if (d > daysInMonth(state.year, m)) { frag.appendChild(makeCell("star empty")); continue; }
+          frag.appendChild(makeStar(habit, fmt(state.year, m, d), `${MONTHS[m]} ${d}`));
         }
-        const dateStr = fmt(state.year, m, d);
-        const star = document.createElement("button");
-        star.className = "star";
-        star.type = "button";
-        star.dataset.date = dateStr;
-        star.setAttribute("aria-label", `${MONTHS[m]} ${d}`);
-        if (habit.days[dateStr]) star.classList.add("done");
-        if (dateStr === todayStr) star.classList.add("today");
-        frag.appendChild(star);
+      }
+    } else {
+      // Days across the top, months down the side.
+      for (let d = 1; d <= 31; d++) frag.appendChild(makeCell("col-head", d));
+      for (let m = 0; m < 12; m++) {
+        frag.appendChild(makeCell("row-head", MONTHS[m]));
+        for (let d = 1; d <= 31; d++) {
+          if (d > daysInMonth(state.year, m)) { frag.appendChild(makeCell("star empty")); continue; }
+          frag.appendChild(makeStar(habit, fmt(state.year, m, d), `${MONTHS[m]} ${d}`));
+        }
       }
     }
-
     calendar.appendChild(frag);
   }
 
@@ -218,7 +230,7 @@
 
     if (animate) {
       ringWrap.classList.remove("pop");
-      void ringWrap.offsetWidth; // restart animation
+      void ringWrap.offsetWidth;
       ringWrap.classList.add("pop");
       if (complete && !wasComplete) celebrate();
     }
@@ -234,30 +246,25 @@
 
     const dateStr = star.dataset.date;
     const nowDone = !habit.days[dateStr];
-
     if (nowDone) habit.days[dateStr] = true;
     else delete habit.days[dateStr];
 
     star.classList.toggle("done", nowDone);
-
-    // Pop animation
     star.classList.remove("pop");
     void star.offsetWidth;
     star.classList.add("pop");
     if (nowDone) burst(star);
 
     save();
-    renderHeader(); // refresh day count
-
+    renderHeader();
     if (dateStr === todayStr) updateRing(true);
   }
 
-  // Little particle burst from a star when it is completed
   function burst(star) {
     const rect = star.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const colors = ["#ff8a4c", "#ff5a2e", "#ffc73a", "#fff0d6"];
+    const colors = ["#ff5a2e", "#ff8a4c", "#ffffff"];
     for (let i = 0; i < 8; i++) {
       const p = document.createElement("div");
       p.className = "burst";
@@ -266,7 +273,7 @@
       p.style.background = colors[i % colors.length];
       document.body.appendChild(p);
       const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.5;
-      const dist = 18 + Math.random() * 16;
+      const dist = 16 + Math.random() * 16;
       const dx = Math.cos(angle) * dist;
       const dy = Math.sin(angle) * dist;
       p.animate(
@@ -305,12 +312,28 @@
     scrollToToday();
   }
 
-  // ---------- Admin panel ----------
+  function setOrientation(orient) {
+    if (orient !== "vertical" && orient !== "horizontal") return;
+    if (state.orientation === orient) return;
+    state.orientation = orient;
+    save();
+    renderCalendar();
+    syncOrientToggle();
+    scrollToToday();
+  }
+
+  function syncOrientToggle() {
+    orientToggle.querySelectorAll(".seg-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.orient === state.orientation);
+    });
+  }
+
+  // ---------- Settings / admin panel ----------
   function openAdmin() {
     renderHabitList();
+    syncOrientToggle();
     adminOverlay.hidden = false;
     adminPanel.hidden = false;
-    setTimeout(() => newHabitInput.focus(), 50);
   }
 
   function closeAdmin() {
@@ -325,10 +348,7 @@
 
   function addHabit() {
     const name = newHabitInput.value.trim();
-    if (!name) {
-      newHabitInput.focus();
-      return;
-    }
+    if (!name) { newHabitInput.focus(); return; }
     const habit = { id: uid(), name, days: {} };
     state.habits.push(habit);
     state.currentIndex = state.habits.length - 1;
@@ -343,9 +363,7 @@
     habitList.innerHTML = "";
     if (!state.habits.length) {
       const li = document.createElement("li");
-      li.style.color = "var(--muted-2)";
-      li.style.textAlign = "center";
-      li.style.padding = "20px";
+      li.style.cssText = "color:var(--muted-2);text-align:center;padding:18px";
       li.textContent = "No habits yet — add one above.";
       habitList.appendChild(li);
       return;
@@ -356,16 +374,14 @@
       li.className = "habit-item" + (i === state.currentIndex ? " active" : "");
       li.dataset.id = habit.id;
 
-      // Drag handle
       const handle = document.createElement("div");
       handle.className = "drag-handle";
       handle.title = "Drag to reorder";
       handle.innerHTML =
         '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-      handle.addEventListener("pointerdown", (e) => startDrag(e, li, habit));
+      handle.addEventListener("pointerdown", (e) => startDrag(e, li));
       li.appendChild(handle);
 
-      // Name input
       const input = document.createElement("input");
       input.type = "text";
       input.value = habit.name;
@@ -386,7 +402,6 @@
       });
       li.appendChild(input);
 
-      // Day count for the current year
       const count = document.createElement("span");
       count.className = "count";
       const n = countDays(habit, state.year);
@@ -394,23 +409,20 @@
       count.title = `${n} day${n === 1 ? "" : "s"} in ${state.year}`;
       li.appendChild(count);
 
-      // Actions
       const actions = document.createElement("div");
       actions.className = "item-actions";
-
-      const upBtn = miniBtn("Move up", '<path d="M18 15l-6-6-6 6"/>', () => moveHabit(i, -1));
-      upBtn.disabled = i === 0;
-      const downBtn = miniBtn("Move down", '<path d="M6 9l6 6 6-6"/>', () => moveHabit(i, 1));
-      downBtn.disabled = i === state.habits.length - 1;
       const viewBtn = miniBtn("View this habit", '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>', () => {
         state.currentIndex = i;
         save();
         renderAll();
         renderHabitList();
       });
+      const upBtn = miniBtn("Move up", '<path d="M18 15l-6-6-6 6"/>', () => moveHabit(i, -1));
+      upBtn.disabled = i === 0;
+      const downBtn = miniBtn("Move down", '<path d="M6 9l6 6 6-6"/>', () => moveHabit(i, 1));
+      downBtn.disabled = i === state.habits.length - 1;
       const delBtn = miniBtn("Delete habit", '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', () => askDelete(li));
       delBtn.classList.add("danger");
-
       actions.append(viewBtn, upBtn, downBtn, delBtn);
       li.appendChild(actions);
 
@@ -449,7 +461,6 @@
     const habit = state.habits.find((h) => h.id === id);
     const name = habit ? habit.name : "this habit";
 
-    const prevHTML = li.innerHTML;
     li.innerHTML = "";
     const row = document.createElement("div");
     row.className = "confirm-row";
@@ -465,10 +476,7 @@
     row.append(msg, no, yes);
     li.appendChild(row);
 
-    no.addEventListener("click", () => {
-      li.classList.remove("confirming");
-      renderHabitList();
-    });
+    no.addEventListener("click", () => { li.classList.remove("confirming"); renderHabitList(); });
     yes.addEventListener("click", () => deleteHabit(id));
   }
 
@@ -477,18 +485,15 @@
     if (idx === -1) return;
     const wasCurrentId = currentHabit() ? currentHabit().id : null;
     state.habits.splice(idx, 1);
-    if (wasCurrentId === id) {
-      state.currentIndex = clampIndex(idx, state.habits.length);
-    } else if (wasCurrentId) {
-      state.currentIndex = state.habits.findIndex((h) => h.id === wasCurrentId);
-    }
+    if (wasCurrentId === id) state.currentIndex = clampIndex(idx, state.habits.length);
+    else if (wasCurrentId) state.currentIndex = state.habits.findIndex((h) => h.id === wasCurrentId);
     save();
     renderAll();
     renderHabitList();
   }
 
-  // ---------- Pointer-based drag reordering (works on touch + mouse) ----------
-  function startDrag(e, li, habit) {
+  // ---------- Pointer-based drag reordering (touch + mouse) ----------
+  function startDrag(e, li) {
     if (e.button != null && e.button !== 0) return;
     e.preventDefault();
     const currentId = currentHabit() ? currentHabit().id : null;
@@ -501,22 +506,15 @@
       let placed = false;
       for (const it of others) {
         const r = it.getBoundingClientRect();
-        if (y < r.top + r.height / 2) {
-          habitList.insertBefore(li, it);
-          placed = true;
-          break;
-        }
+        if (y < r.top + r.height / 2) { habitList.insertBefore(li, it); placed = true; break; }
       }
       if (!placed) habitList.appendChild(li);
     };
-
     const up = () => {
       li.classList.remove("dragging");
       document.body.style.userSelect = "";
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", up);
-
-      // Rebuild state order from the DOM
       const ids = [...habitList.querySelectorAll(".habit-item")].map((n) => n.dataset.id);
       state.habits.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
       if (currentId) state.currentIndex = state.habits.findIndex((h) => h.id === currentId);
@@ -524,9 +522,49 @@
       renderAll();
       renderHabitList();
     };
-
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
+  }
+
+  // ---------- Export / import ----------
+  function exportData() {
+    const payload = JSON.stringify(state, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `good-habits-backup-${todayStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.habits)) throw new Error("Not a Good Habits backup.");
+        data.habits.forEach((h) => {
+          if (!h.id) h.id = uid();
+          if (!h.days || typeof h.days !== "object") h.days = {};
+        });
+        data.year = data.year || now.getFullYear();
+        data.currentIndex = clampIndex(data.currentIndex || 0, data.habits.length);
+        data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
+          ? data.orientation : defaultOrientation();
+        state = data;
+        wasComplete = isAllCompleteToday();
+        save();
+        renderAll();
+        renderHabitList();
+        scrollToToday();
+      } catch (err) {
+        alert("Sorry — that file couldn't be read as a Good Habits backup.");
+      }
+    };
+    reader.readAsText(file);
   }
 
   // ---------- Confetti celebration ----------
@@ -541,13 +579,12 @@
 
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const colors = ["#ff8a4c", "#ff5a2e", "#ffc73a", "#ffe87a", "#ffffff"];
+    const colors = ["#ff5a2e", "#ff8a4c", "#ffb38a", "#ffffff"];
     const parts = [];
-    const count = 140;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 140; i++) {
       parts.push({
         x: W / 2 + (Math.random() - 0.5) * 120,
-        y: H * 0.28,
+        y: H * 0.26,
         vx: (Math.random() - 0.5) * 11,
         vy: Math.random() * -10 - 5,
         size: 4 + Math.random() * 6,
@@ -557,7 +594,6 @@
         life: 1,
       });
     }
-
     let start = null;
     function frame(ts) {
       if (!start) start = ts;
@@ -565,7 +601,7 @@
       confettiCtx.clearRect(0, 0, W, H);
       let alive = false;
       for (const p of parts) {
-        p.vy += 0.28; // gravity
+        p.vy += 0.28;
         p.vx *= 0.99;
         p.x += p.vx;
         p.y += p.vy;
@@ -582,59 +618,20 @@
           confettiCtx.restore();
         }
       }
-      if (alive) {
-        requestAnimationFrame(frame);
-      } else {
-        confettiCtx.clearRect(0, 0, W, H);
-      }
+      if (alive) requestAnimationFrame(frame);
+      else confettiCtx.clearRect(0, 0, W, H);
     }
     requestAnimationFrame(frame);
   }
 
-  // ---------- Auto-scroll to current month/day on load ----------
+  // ---------- Scroll to today ----------
   function scrollToToday() {
     if (state.year !== now.getFullYear()) return;
-    const sel = `.star[data-date="${todayStr}"]`;
-    const target = calendar.querySelector(sel);
-    if (target) {
-      target.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
-    }
+    const target = calendar.querySelector(`.star[data-date="${todayStr}"]`);
+    if (target) target.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
   }
 
-  // ---------- Events ----------
-  el("prevHabit").addEventListener("click", () => goHabit(-1));
-  el("nextHabit").addEventListener("click", () => goHabit(1));
-  el("prevYear").addEventListener("click", () => goYear(-1));
-  el("nextYear").addEventListener("click", () => goYear(1));
-  el("thisYearBtn").addEventListener("click", goToThisYear);
-  el("openAdmin").addEventListener("click", openAdmin);
-  el("closeAdmin").addEventListener("click", closeAdmin);
-  el("emptyAddBtn").addEventListener("click", openAdmin);
-  habitNameBtn.addEventListener("click", openAdmin);
-  adminOverlay.addEventListener("click", closeAdmin);
-  el("addHabitBtn").addEventListener("click", addHabit);
-  newHabitInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addHabit();
-  });
-  calendar.addEventListener("click", onCalendarClick);
-  ringWrap.addEventListener("click", goToThisYear);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !adminPanel.hidden) closeAdmin();
-    if (!adminPanel.hidden) return; // don't navigate while editing
-    if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
-    if (e.key === "ArrowLeft") goHabit(-1);
-    if (e.key === "ArrowRight") goHabit(1);
-  });
-
-  window.addEventListener("resize", () => {
-    if (confettiCtx) {
-      confettiCanvas.width = window.innerWidth * (window.devicePixelRatio || 1);
-      confettiCanvas.height = window.innerHeight * (window.devicePixelRatio || 1);
-    }
-  });
-
-  // ---------- Starfield background ----------
+  // ---------- Starfield ----------
   function buildStarfield() {
     const sf = el("starfield");
     if (!sf) return;
@@ -651,8 +648,68 @@
     sf.innerHTML = html;
   }
 
+  // ---------- First-visit legend ----------
+  function maybeShowIntro() {
+    let seen = false;
+    try { seen = localStorage.getItem(INTRO_KEY) === "1"; } catch (e) {}
+    if (seen) return;
+    el("intro").hidden = false;
+  }
+  function dismissIntro() {
+    el("intro").hidden = true;
+    try { localStorage.setItem(INTRO_KEY, "1"); } catch (e) {}
+  }
+
+  // ---------- Events ----------
+  el("prevHabit").addEventListener("click", () => goHabit(-1));
+  el("nextHabit").addEventListener("click", () => goHabit(1));
+  el("prevYear").addEventListener("click", () => goYear(-1));
+  el("nextYear").addEventListener("click", () => goYear(1));
+  el("thisYearBtn").addEventListener("click", goToThisYear);
+  el("openAdmin").addEventListener("click", openAdmin);
+  el("closeAdmin").addEventListener("click", closeAdmin);
+  el("emptyAddBtn").addEventListener("click", openAdmin);
+  habitNameBtn.addEventListener("click", openAdmin);
+  adminOverlay.addEventListener("click", closeAdmin);
+  el("addHabitBtn").addEventListener("click", addHabit);
+  newHabitInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addHabit(); });
+  calendar.addEventListener("click", onCalendarClick);
+  ringWrap.addEventListener("click", goToThisYear);
+  el("introBtn").addEventListener("click", dismissIntro);
+
+  orientToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg-btn");
+    if (btn) setOrientation(btn.dataset.orient);
+  });
+
+  el("exportBtn").addEventListener("click", exportData);
+  el("importBtn").addEventListener("click", () => el("importFile").click());
+  el("importFile").addEventListener("change", (e) => {
+    if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = "";
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (!el("intro").hidden) { dismissIntro(); return; }
+      if (!adminPanel.hidden) { closeAdmin(); return; }
+    }
+    if (!adminPanel.hidden || !el("intro").hidden) return;
+    if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    if (e.key === "ArrowLeft") goHabit(-1);
+    if (e.key === "ArrowRight") goHabit(1);
+  });
+
+  window.addEventListener("resize", () => {
+    if (confettiCtx) {
+      confettiCanvas.width = window.innerWidth * (window.devicePixelRatio || 1);
+      confettiCanvas.height = window.innerHeight * (window.devicePixelRatio || 1);
+    }
+  });
+
   // ---------- Init ----------
   buildStarfield();
   renderAll();
   scrollToToday();
+  maybeShowIntro();
 })();

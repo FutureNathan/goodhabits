@@ -3,53 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#050505" />
-  <meta name="description" content="A simple, beautiful habit tracker. Light up a star for every day you keep a habit. Saved right in your browser — no account needed." />
+  <meta name="theme-color" content="#060606" />
+
+  <title>Good Habits — a star for every day</title>
+  <meta name="description" content="Light up a star for every day you keep a habit. A simple, beautiful habit tracker that saves right in your browser — no account needed." />
+
+  <!-- Icons -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Open Graph / social share.
+       NOTE: og:url and og:image must be ABSOLUTE for iMessage/Twitter/etc.
+       Update the domain below if you host somewhere other than GitHub Pages. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Good Habits" />
+  <meta property="og:title" content="Good Habits — a star for every day" />
+  <meta property="og:description" content="Light up a star for every day you keep a habit. Simple, beautiful, and saved right in your browser." />
+  <meta property="og:url" content="https://futurenathan.github.io/goodhabits/" />
+  <meta property="og:image" content="https://futurenathan.github.io/goodhabits/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Good Habits — a star for every day" />
+  <meta name="twitter:description" content="Light up a star for every day you keep a habit. Simple, beautiful, and saved right in your browser." />
+  <meta name="twitter:image" content="https://futurenathan.github.io/goodhabits/og-image.png" />
+
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Good Habits" />
-  <title>Good Habits</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AD%90%3C/text%3E%3C/svg%3E" />
 </head>
 <body>
   <div class="starfield" id="starfield" aria-hidden="true"></div>
 
   <div id="app">
-    <!-- Top bar -->
+    <!-- Top bar: progress ring + settings -->
     <header class="topbar">
-      <div class="brand">Good Habits</div>
-      <div class="topbar-actions">
-        <!-- Daily progress ring -->
-        <button class="ring-wrap" id="ringWrap" title="Today's progress — tap to jump to today">
-          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-            <defs>
-              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ff8a4c"/>
-                <stop offset="100%" stop-color="#ff4d1c"/>
-              </linearGradient>
-              <linearGradient id="ringGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ffe87a"/>
-                <stop offset="50%" stop-color="#ffc73a"/>
-                <stop offset="100%" stop-color="#ff9d00"/>
-              </linearGradient>
-            </defs>
-            <circle class="ring-track" cx="60" cy="60" r="52"/>
-            <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"/>
-          </svg>
-          <div class="ring-label" id="ringLabel">0/0</div>
-        </button>
-        <button class="icon-btn" id="openAdmin" aria-label="Settings & habits" title="Settings & habits">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        </button>
-      </div>
+      <button class="ring-wrap" id="ringWrap" title="Today's progress — tap to jump to today">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-label" id="ringLabel">0/0</div>
+      </button>
+      <button class="icon-btn" id="openAdmin" aria-label="Settings & habits" title="Settings & habits">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
     </header>
 
-    <!-- Big habit title with habit navigation -->
+    <!-- Big habit title with navigation -->
     <section class="habit-bar">
       <button class="nav-arrow" id="prevHabit" aria-label="Previous habit" title="Previous habit">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
@@ -60,26 +67,25 @@
       </button>
     </section>
 
-    <!-- Calendar + stats -->
-    <main class="calendar-area">
-      <aside class="info-rail" id="infoRail">
-        <div class="stat">
-          <div class="stat-value" id="statHabit">1 / 1</div>
-          <div class="stat-label">Habit shown</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" id="statDays">0</div>
-          <div class="stat-label">Days done in <span id="statYear">2026</span></div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" id="statStreak">0</div>
-          <div class="stat-label">Current streak</div>
-        </div>
-      </aside>
-
-      <div class="calendar-scroll" id="calendarScroll">
-        <div class="calendar" id="calendar"></div>
+    <!-- Stats, centered under the title -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat">
+        <span class="stat-value" id="statHabit">1 / 1</span>
+        <span class="stat-label">Habit shown</span>
       </div>
+      <div class="stat">
+        <span class="stat-value" id="statDays">0</span>
+        <span class="stat-label">Days in <span id="statYear">2026</span></span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="statStreak">0</span>
+        <span class="stat-label">Current streak</span>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <main class="calendar-area" id="calendarArea">
+      <div class="calendar" id="calendar"></div>
 
       <!-- Empty state -->
       <div class="empty-state" id="emptyState" hidden>
@@ -89,6 +95,17 @@
         <button class="primary-btn" id="emptyAddBtn">Add a habit</button>
       </div>
     </main>
+  </div>
+
+  <!-- First-visit legend -->
+  <div class="intro" id="intro" hidden>
+    <div class="intro-card">
+      <h3>Welcome ⭐</h3>
+      <p><b>Tap any star</b> on a day you kept the habit — it lights up orange. Tap again to undo. Use the <b>‹ ›</b> arrows to move between habits.</p>
+      <p>The three numbers under the title: <b>Habit shown</b> is which habit you're viewing, <b>Days</b> is how many you've logged this year, and <b>Current streak</b> is your run of days in a row.</p>
+      <p>The ring up top tracks <b>today</b> across all your habits — fill it and it celebrates. Everything saves automatically in this browser.</p>
+      <button class="primary-btn" id="introBtn">Got it</button>
+    </div>
   </div>
 
   <!-- Settings / admin panel -->
@@ -101,7 +118,20 @@
       </button>
     </div>
 
-    <!-- Year picker (moved here from the title area) -->
+    <!-- Layout -->
+    <div class="admin-section">
+      <div class="admin-section-title">Layout</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Calendar direction</span>
+        <div class="seg" id="orientToggle" role="group" aria-label="Calendar direction">
+          <button class="seg-btn" type="button" data-orient="vertical">Vertical</button>
+          <button class="seg-btn" type="button" data-orient="horizontal">Horizontal</button>
+        </div>
+      </div>
+      <p class="admin-tip">Vertical runs the months across the top (best for tall / portrait screens). Horizontal lays the whole year out wide (best for laptops & monitors).</p>
+    </div>
+
+    <!-- Year -->
     <div class="admin-section">
       <div class="admin-section-title">Year</div>
       <div class="year-control">
@@ -116,6 +146,7 @@
       </div>
     </div>
 
+    <!-- Habits -->
     <div class="admin-section">
       <div class="admin-section-title">Habits</div>
       <div class="admin-add">
@@ -123,7 +154,18 @@
         <button class="primary-btn" id="addHabitBtn">Add</button>
       </div>
       <ul class="habit-list" id="habitList"></ul>
-      <p class="admin-tip">Drag the handle (or use the arrows) to set the order you tap through. Everything saves automatically in this browser.</p>
+      <p class="admin-tip">Drag the handle (or use the arrows) to set the order you tap through.</p>
+    </div>
+
+    <!-- Data -->
+    <div class="admin-section">
+      <div class="admin-section-title">Your data</div>
+      <div class="data-row">
+        <button class="ghost-btn" id="exportBtn">↓ Download backup</button>
+        <button class="ghost-btn" id="importBtn">↑ Restore backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden />
+      </div>
+      <p class="admin-tip">Download saves all your habits and history as a file. Restore loads one back — on this device or another browser.</p>
     </div>
   </aside>
 

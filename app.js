@@ -15,9 +15,12 @@
   const calendar = el("calendar");
   const calendarScroll = el("calendarScroll");
   const emptyState = el("emptyState");
+  const infoRail = el("infoRail");
   const habitNameBtn = el("habitName");
-  const habitCount = el("habitCount");
-  const habitTotal = el("habitTotal");
+  const statHabit = el("statHabit");
+  const statDays = el("statDays");
+  const statStreak = el("statStreak");
+  const statYear = el("statYear");
   const yearLabel = el("yearLabel");
   const ringWrap = el("ringWrap");
   const ringProgress = el("ringProgress");
@@ -31,6 +34,7 @@
   // ---------- Date helpers ----------
   const pad = (n) => String(n).padStart(2, "0");
   const fmt = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+  const fmtDate = (d) => fmt(d.getFullYear(), d.getMonth(), d.getDate());
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
 
   const now = new Date();
@@ -98,6 +102,19 @@
     return n;
   }
 
+  // Consecutive completed days ending today (or yesterday, so an unlogged
+  // "today" doesn't look like a broken streak before you've checked in).
+  function currentStreak(habit) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (!habit.days[fmtDate(d)]) d.setDate(d.getDate() - 1);
+    let streak = 0;
+    while (habit.days[fmtDate(d)]) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }
+
   function isAllCompleteToday() {
     if (!state.habits.length) return false;
     return state.habits.every((h) => h.days[todayStr]);
@@ -109,6 +126,7 @@
     const has = state.habits.length > 0;
     emptyState.hidden = has;
     calendarScroll.style.display = has ? "" : "none";
+    infoRail.style.display = has ? "" : "none";
 
     renderHeader();
     renderCalendar();
@@ -119,19 +137,24 @@
     const habit = currentHabit();
     const total = state.habits.length;
     yearLabel.textContent = state.year;
+    statYear.textContent = state.year;
 
     if (!habit) {
-      habitNameBtn.textContent = "No habits";
-      habitCount.textContent = "0 / 0";
-      habitTotal.textContent = "0 days";
+      habitNameBtn.textContent = "No habits yet";
+      statHabit.textContent = "0 / 0";
+      statDays.textContent = "0";
+      statStreak.textContent = "0";
+      statStreak.parentElement.classList.remove("hot");
       el("prevHabit").disabled = true;
       el("nextHabit").disabled = true;
       return;
     }
     habitNameBtn.textContent = habit.name || "Untitled habit";
-    habitCount.textContent = `${state.currentIndex + 1} / ${total}`;
-    const n = countDays(habit, state.year);
-    habitTotal.textContent = `${n} ${n === 1 ? "day" : "days"}`;
+    statHabit.textContent = `${state.currentIndex + 1} / ${total}`;
+    statDays.textContent = countDays(habit, state.year);
+    const streak = currentStreak(habit);
+    statStreak.textContent = streak;
+    statStreak.parentElement.classList.toggle("hot", streak > 0);
     el("prevHabit").disabled = total <= 1;
     el("nextHabit").disabled = total <= 1;
   }
@@ -234,7 +257,7 @@
     const rect = star.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const colors = ["#ffe87a", "#ffc73a", "#ff9d00", "#fff6cf"];
+    const colors = ["#ff8a4c", "#ff5a2e", "#ffc73a", "#fff0d6"];
     for (let i = 0; i < 8; i++) {
       const p = document.createElement("div");
       p.className = "burst";
@@ -269,6 +292,17 @@
     state.year += delta;
     save();
     renderAll();
+    if (!adminPanel.hidden) renderHabitList();
+  }
+
+  function goToThisYear() {
+    if (state.year !== now.getFullYear()) {
+      state.year = now.getFullYear();
+      save();
+      renderAll();
+      if (!adminPanel.hidden) renderHabitList();
+    }
+    scrollToToday();
   }
 
   // ---------- Admin panel ----------
@@ -507,7 +541,7 @@
 
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const colors = ["#ffe87a", "#ffc73a", "#ff9d00", "#3dd6ff", "#4f7cff", "#ffffff"];
+    const colors = ["#ff8a4c", "#ff5a2e", "#ffc73a", "#ffe87a", "#ffffff"];
     const parts = [];
     const count = 140;
     for (let i = 0; i < count; i++) {
@@ -572,6 +606,7 @@
   el("nextHabit").addEventListener("click", () => goHabit(1));
   el("prevYear").addEventListener("click", () => goYear(-1));
   el("nextYear").addEventListener("click", () => goYear(1));
+  el("thisYearBtn").addEventListener("click", goToThisYear);
   el("openAdmin").addEventListener("click", openAdmin);
   el("closeAdmin").addEventListener("click", closeAdmin);
   el("emptyAddBtn").addEventListener("click", openAdmin);
@@ -582,14 +617,7 @@
     if (e.key === "Enter") addHabit();
   });
   calendar.addEventListener("click", onCalendarClick);
-  ringWrap.addEventListener("click", () => {
-    if (state.year !== now.getFullYear()) {
-      state.year = now.getFullYear();
-      save();
-      renderAll();
-    }
-    scrollToToday();
-  });
+  ringWrap.addEventListener("click", goToThisYear);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !adminPanel.hidden) closeAdmin();
@@ -606,7 +634,25 @@
     }
   });
 
+  // ---------- Starfield background ----------
+  function buildStarfield() {
+    const sf = el("starfield");
+    if (!sf) return;
+    const count = Math.max(40, Math.min(140, Math.round((window.innerWidth * window.innerHeight) / 13000)));
+    let html = "";
+    for (let i = 0; i < count; i++) {
+      const size = Math.random() < 0.82 ? 1 : 2;
+      const x = (Math.random() * 100).toFixed(2);
+      const y = (Math.random() * 100).toFixed(2);
+      const o = (0.25 + Math.random() * 0.6).toFixed(2);
+      const delay = (Math.random() * 4).toFixed(2);
+      html += `<i style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;--o:${o};opacity:${o};animation-delay:${delay}s"></i>`;
+    }
+    sf.innerHTML = html;
+  }
+
   // ---------- Init ----------
+  buildStarfield();
   renderAll();
   scrollToToday();
 })();

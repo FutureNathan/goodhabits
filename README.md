@@ -18,13 +18,16 @@ saves right in your browser.
   you've completed *today* (e.g. `3/4`). Every tap gives it a satisfying pop.
 - **Golden celebration.** Finish *all* your habits for the day and the ring turns
   gold and shimmers, with a burst of confetti. 🎉
-- **Manage habits** from the gear menu (or by tapping the habit's name):
+- **At-a-glance stats** sit beside the calendar: which habit you're viewing
+  (`1 / 4`), how many days you've logged this year, and your current streak.
+- **Settings** (the gear icon, or tap the habit's name) let you:
   - Add a new habit.
   - Rename any habit.
   - Reorder them (drag the handle, or use the up/down arrows) — this sets the
     order you flip through them.
   - Delete a habit, with a confirmation step so you never lose one by accident.
-- **Switch years** with the `‹ 2026 ›` control to look back or plan ahead.
+  - **Switch years** with the `‹ 2026 ›` control (plus a "This year" shortcut)
+    to look back or plan ahead.
 - **Works on any device** — phone, tablet, or desktop — and **saves to your
   browser** (via `localStorage`), so there's nothing to sign up for.
 

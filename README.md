@@ -32,6 +32,7 @@ saves right in your browser.
   - Switch years with the `‹ 2026 ›` control (plus a "This year" shortcut).
   - **Download a backup** of all your habits and history, and **restore** one
     later — handy for moving between devices or browsers.
+  - An **About** section with credits and a link to this open-source repo.
 - **Works on any device** — phone, tablet, or desktop — and **saves to your
   browser** (via `localStorage`), so there's nothing to sign up for.
 

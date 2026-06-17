@@ -635,7 +635,9 @@
   function buildStarfield() {
     const sf = el("starfield");
     if (!sf) return;
-    const count = Math.max(40, Math.min(140, Math.round((window.innerWidth * window.innerHeight) / 13000)));
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const count = Math.max(40, Math.min(140, Math.round((W * H) / 13000)));
     let html = "";
     for (let i = 0; i < count; i++) {
       const size = Math.random() < 0.82 ? 1 : 2;
@@ -644,6 +646,18 @@
       const o = (0.25 + Math.random() * 0.6).toFixed(2);
       const delay = (Math.random() * 4).toFixed(2);
       html += `<i style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;--o:${o};opacity:${o};animation-delay:${delay}s"></i>`;
+    }
+    // A couple of occasional shooting stars streaking down-left
+    for (let s = 0; s < 2; s++) {
+      const startX = (55 + Math.random() * 40).toFixed(1);
+      const startY = (2 + Math.random() * 26).toFixed(1);
+      const dx = -Math.round(W * (0.35 + Math.random() * 0.25));
+      const dy = Math.round(H * (0.18 + Math.random() * 0.16));
+      const tail = ((Math.atan2(-dy, -dx) * 180) / Math.PI).toFixed(1);
+      const dur = (8 + Math.random() * 5).toFixed(1);
+      const delay = (Math.random() * 9).toFixed(1);
+      const len = Math.round(90 + Math.random() * 60);
+      html += `<span class="shoot" style="left:${startX}%;top:${startY}%;--dx:${dx}px;--dy:${dy}px;--tail:${tail}deg;--dur:${dur}s;--delay:${delay}s;--len:${len}px"></span>`;
     }
     sf.innerHTML = html;
   }

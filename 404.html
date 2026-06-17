@@ -23,7 +23,7 @@
     html, body { margin: 0; height: 100%; }
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(1100px 720px at 78% -10%, #1a120d 0%, rgba(8,6,5,0) 55%), var(--bg);
+      background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
       overflow: hidden;
@@ -31,6 +31,10 @@
     .starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
     .starfield i { position: absolute; border-radius: 50%; background: #fff; animation: tw 4s ease-in-out infinite; }
     @keyframes tw { 0%,100% { opacity: var(--o,.5); } 50% { opacity: calc(var(--o,.5) * .25); } }
+    .shoot { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: 0; filter: drop-shadow(0 0 6px rgba(255,255,255,.9)); animation: shoot var(--dur,9s) cubic-bezier(.4,0,.5,1) infinite; animation-delay: var(--delay,0s); }
+    .shoot::before { content: ""; position: absolute; left: 2px; top: 50%; width: var(--len,120px); height: 1.5px; background: linear-gradient(90deg, rgba(255,255,255,.85), rgba(255,255,255,0)); transform-origin: left center; transform: translateY(-50%) rotate(var(--tail,200deg)); }
+    @keyframes shoot { 0% { opacity: 0; transform: translate(0,0); } 4% { opacity: 1; } 16% { opacity: 1; } 22% { opacity: 0; transform: translate(var(--dx,-360px), var(--dy,210px)); } 100% { opacity: 0; transform: translate(var(--dx,-360px), var(--dy,210px)); } }
+    @media (prefers-reduced-motion: reduce) { .shoot { display: none; } }
 
     .wrap {
       position: relative;
@@ -87,7 +91,8 @@
     (function () {
       var sf = document.getElementById("starfield");
       if (!sf) return;
-      var count = Math.max(40, Math.min(140, Math.round((window.innerWidth * window.innerHeight) / 13000)));
+      var W = window.innerWidth, H = window.innerHeight;
+      var count = Math.max(40, Math.min(140, Math.round((W * H) / 13000)));
       var html = "";
       for (var i = 0; i < count; i++) {
         var size = Math.random() < 0.82 ? 1 : 2;
@@ -96,6 +101,17 @@
         var o = (0.25 + Math.random() * 0.6).toFixed(2);
         var delay = (Math.random() * 4).toFixed(2);
         html += "<i style='left:" + x + "%;top:" + y + "%;width:" + size + "px;height:" + size + "px;--o:" + o + ";opacity:" + o + ";animation-delay:" + delay + "s'></i>";
+      }
+      for (var s = 0; s < 2; s++) {
+        var sx = (55 + Math.random() * 40).toFixed(1);
+        var sy = (2 + Math.random() * 26).toFixed(1);
+        var dx = -Math.round(W * (0.35 + Math.random() * 0.25));
+        var dy = Math.round(H * (0.18 + Math.random() * 0.16));
+        var tail = (Math.atan2(-dy, -dx) * 180 / Math.PI).toFixed(1);
+        var dur = (8 + Math.random() * 5).toFixed(1);
+        var dl = (Math.random() * 9).toFixed(1);
+        var len = Math.round(90 + Math.random() * 60);
+        html += "<span class='shoot' style='left:" + sx + "%;top:" + sy + "%;--dx:" + dx + "px;--dy:" + dy + "px;--tail:" + tail + "deg;--dur:" + dur + "s;--delay:" + dl + "s;--len:" + len + "px'></span>";
       }
       sf.innerHTML = html;
     })();

@@ -575,9 +575,43 @@ button { font-family: inherit; cursor: pointer; }
 .ghost-btn.full { width: 100%; flex: none; }
 
 /* About */
-.about-text { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
-.about-text a { color: var(--accent); font-weight: 700; text-decoration: none; }
-.about-text a:hover { text-decoration: underline; }
+.made-by {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.made-by .heart { font-size: 13px; }
+.made-by .name {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.made-by .go { color: var(--muted-2); transition: transform 0.2s, color 0.15s; }
+.made-by:hover { color: var(--text); }
+.made-by:hover .name { text-decoration-style: solid; }
+.made-by:hover .go { color: var(--accent); transform: translate(2px, -2px); }
+.made-by .astronaut {
+  height: 38px;
+  width: auto;
+  margin-left: 2px;
+  filter: drop-shadow(0 0 6px rgba(255, 90, 46, 0.35));
+  animation: floaty 4s ease-in-out infinite;
+  transition: transform 0.25s;
+}
+.made-by:hover .astronaut { transform: scale(1.14) rotate(-5deg); }
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-5px) rotate(-2deg); }
+}
 
 /* Confetti */
 #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }

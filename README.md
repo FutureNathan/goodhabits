@@ -82,3 +82,7 @@ Everything lives in your browser under the key `goodhabits.v1`. Clearing your
 browser data, or using a different browser/device, starts fresh — so use
 **Download backup** in Settings if you want a copy. Because it's local-first,
 your habit history never leaves your machine unless you export it.
+
+## License
+
+[MIT](LICENSE) © Nathan Towianski. Free to use, modify, and share.

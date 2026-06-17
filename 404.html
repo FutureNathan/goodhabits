@@ -20,13 +20,13 @@
       --star-off: #4f4c48;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
+    html, body { margin: 0; min-height: 100%; }
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
-      overflow: hidden;
+      overflow-x: hidden;
     }
     .starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
     .starfield i { position: absolute; border-radius: 50%; background: #fff; animation: tw 4s ease-in-out infinite; }
@@ -34,32 +34,44 @@
     .shoot { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: 0; filter: drop-shadow(0 0 6px rgba(255,255,255,.9)); animation: shoot var(--dur,9s) cubic-bezier(.4,0,.5,1) infinite; animation-delay: var(--delay,0s); }
     .shoot::before { content: ""; position: absolute; left: 2px; top: 50%; width: var(--len,120px); height: 1.5px; background: linear-gradient(90deg, rgba(255,255,255,.85), rgba(255,255,255,0)); transform-origin: left center; transform: translateY(-50%) rotate(var(--tail,200deg)); }
     @keyframes shoot { 0% { opacity: 0; transform: translate(0,0); } 4% { opacity: 1; } 16% { opacity: 1; } 22% { opacity: 0; transform: translate(var(--dx,-360px), var(--dy,210px)); } 100% { opacity: 0; transform: translate(var(--dx,-360px), var(--dy,210px)); } }
-    @media (prefers-reduced-motion: reduce) { .shoot { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .shoot { display: none; } .fstar { animation: none !important; } }
 
     .wrap {
       position: relative;
       z-index: 1;
-      height: 100dvh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      gap: 14px;
-      padding: 24px;
+      gap: 16px;
+      padding: 40px 24px;
     }
-    .stars { display: flex; gap: 12px; margin-bottom: 6px; }
-    .s {
-      width: 38px; height: 38px;
+    h1 { margin: 0; font-size: clamp(58px, 14vw, 110px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+    h1 span { color: var(--accent); }
+    .sub { margin: 0; color: var(--muted); font-size: clamp(15px, 2.5vw, 18px); max-width: 460px; line-height: 1.5; }
+
+    /* Star-calendar US flag — orange ("on") or gray ("off") only */
+    .flag {
+      display: grid;
+      grid-template-columns: repeat(31, 1fr);
+      gap: clamp(2px, 0.55vw, 5px);
+      width: min(92vw, 640px);
+      margin: 6px 0 2px;
+    }
+    .fstar {
+      aspect-ratio: 1 / 1;
       background: var(--star-off);
       clip-path: polygon(50% 2%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
     }
-    .s.lit { background: var(--accent); filter: drop-shadow(0 0 6px rgba(255,90,46,.6)); }
-    h1 { margin: 0; font-size: clamp(64px, 16vw, 120px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-    h1 span { color: var(--accent); }
-    p { margin: 0; color: var(--muted); font-size: clamp(15px, 2.5vw, 18px); max-width: 460px; line-height: 1.5; }
+    .fstar.on { background: var(--accent); filter: drop-shadow(0 0 3px rgba(255,90,46,.45)); }
+
+    .flag-caption { margin: 2px 0 0; color: var(--muted); font-size: clamp(13px, 2.2vw, 15px); font-weight: 600; letter-spacing: 0.01em; }
+    .flag-caption b { color: var(--accent); font-weight: 700; }
+
     .btn {
-      margin-top: 12px;
+      margin-top: 14px;
       display: inline-block;
       text-decoration: none;
       border: none;
@@ -74,46 +86,67 @@
     }
     .btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
     .btn:active { transform: translateY(0) scale(.97); }
-    @media (prefers-reduced-motion: reduce) { .starfield i { animation: none; } }
   </style>
 </head>
 <body>
   <div class="starfield" id="starfield" aria-hidden="true"></div>
   <main class="wrap">
-    <div class="stars" aria-hidden="true">
-      <div class="s lit"></div><div class="s"></div><div class="s lit"></div>
-    </div>
     <h1>4<span>0</span>4</h1>
-    <p>This page wandered off the calendar. The star you're looking for isn't here.</p>
+    <p class="sub">This page wandered off the calendar. The star you're looking for isn't here.</p>
+    <div class="flag" id="flag" role="img" aria-label="A star-spangled calendar in the shape of the American flag"></div>
+    <p class="flag-caption">Made in America with <b>love</b> for all humankind.</p>
     <a class="btn" href="/">Back to your habits</a>
   </main>
+
   <script>
     (function () {
+      // Starfield + shooting stars
       var sf = document.getElementById("starfield");
-      if (!sf) return;
-      var W = window.innerWidth, H = window.innerHeight;
-      var count = Math.max(40, Math.min(140, Math.round((W * H) / 13000)));
-      var html = "";
-      for (var i = 0; i < count; i++) {
-        var size = Math.random() < 0.82 ? 1 : 2;
-        var x = (Math.random() * 100).toFixed(2);
-        var y = (Math.random() * 100).toFixed(2);
-        var o = (0.25 + Math.random() * 0.6).toFixed(2);
-        var delay = (Math.random() * 4).toFixed(2);
-        html += "<i style='left:" + x + "%;top:" + y + "%;width:" + size + "px;height:" + size + "px;--o:" + o + ";opacity:" + o + ";animation-delay:" + delay + "s'></i>";
+      if (sf) {
+        var W = window.innerWidth, H = window.innerHeight;
+        var count = Math.max(40, Math.min(140, Math.round((W * H) / 13000)));
+        var html = "";
+        for (var i = 0; i < count; i++) {
+          var size = Math.random() < 0.82 ? 1 : 2;
+          var x = (Math.random() * 100).toFixed(2);
+          var y = (Math.random() * 100).toFixed(2);
+          var o = (0.25 + Math.random() * 0.6).toFixed(2);
+          var delay = (Math.random() * 4).toFixed(2);
+          html += "<i style='left:" + x + "%;top:" + y + "%;width:" + size + "px;height:" + size + "px;--o:" + o + ";opacity:" + o + ";animation-delay:" + delay + "s'></i>";
+        }
+        for (var s = 0; s < 2; s++) {
+          var sx = (55 + Math.random() * 40).toFixed(1);
+          var sy = (2 + Math.random() * 26).toFixed(1);
+          var dx = -Math.round(W * (0.35 + Math.random() * 0.25));
+          var dy = Math.round(H * (0.18 + Math.random() * 0.16));
+          var tail = (Math.atan2(-dy, -dx) * 180 / Math.PI).toFixed(1);
+          var dur = (8 + Math.random() * 5).toFixed(1);
+          var dl = (Math.random() * 9).toFixed(1);
+          var len = Math.round(90 + Math.random() * 60);
+          html += "<span class='shoot' style='left:" + sx + "%;top:" + sy + "%;--dx:" + dx + "px;--dy:" + dy + "px;--tail:" + tail + "deg;--dur:" + dur + "s;--delay:" + dl + "s;--len:" + len + "px'></span>";
+        }
+        sf.innerHTML = html;
       }
-      for (var s = 0; s < 2; s++) {
-        var sx = (55 + Math.random() * 40).toFixed(1);
-        var sy = (2 + Math.random() * 26).toFixed(1);
-        var dx = -Math.round(W * (0.35 + Math.random() * 0.25));
-        var dy = Math.round(H * (0.18 + Math.random() * 0.16));
-        var tail = (Math.atan2(-dy, -dx) * 180 / Math.PI).toFixed(1);
-        var dur = (8 + Math.random() * 5).toFixed(1);
-        var dl = (Math.random() * 9).toFixed(1);
-        var len = Math.round(90 + Math.random() * 60);
-        html += "<span class='shoot' style='left:" + sx + "%;top:" + sy + "%;--dx:" + dx + "px;--dy:" + dy + "px;--tail:" + tail + "deg;--dur:" + dur + "s;--delay:" + dl + "s;--len:" + len + "px'></span>";
+
+      // Star-calendar US flag: 12 rows (months) x 31 cols (days)
+      var flag = document.getElementById("flag");
+      if (flag) {
+        var ROWS = 12, COLS = 31;
+        var cantonRows = 7, cantonCols = Math.round(COLS * 0.42); // union ~ top 7 rows, ~40% wide
+        var out = "";
+        for (var r = 0; r < ROWS; r++) {
+          for (var c = 0; c < COLS; c++) {
+            var on;
+            if (r < cantonRows && c < cantonCols) {
+              on = ((r + c) % 2 === 0);        // star field (the union)
+            } else {
+              on = (r % 2 === 0);              // alternating stripes
+            }
+            out += "<div class='fstar" + (on ? " on" : "") + "'></div>";
+          }
+        }
+        flag.innerHTML = out;
       }
-      sf.innerHTML = html;
     })();
   </script>
 </body>

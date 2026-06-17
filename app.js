@@ -33,6 +33,8 @@
   const orientToggle = el("orientToggle");
   const pastToggle = el("pastToggle");
   const confettiCanvas = el("confetti");
+  const starShowCanvas = el("starShow");
+  const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ---------- Date helpers ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -235,7 +237,6 @@
       ringWrap.classList.remove("pop");
       void ringWrap.offsetWidth;
       ringWrap.classList.add("pop");
-      if (complete && !wasComplete) celebrate();
     }
     wasComplete = complete;
   }
@@ -255,6 +256,7 @@
       star.classList.add("locked");
       return;
     }
+    const wasAllToday = isAllCompleteToday();
     const nowDone = !habit.days[dateStr];
     if (nowDone) habit.days[dateStr] = true;
     else delete habit.days[dateStr];
@@ -268,6 +270,196 @@
     save();
     renderHeader();
     if (dateStr === todayStr) updateRing(true);
+
+    // Calendar light show on completion
+    if (nowDone) {
+      const allNow = isAllCompleteToday();
+      if (allNow && !wasAllToday) {
+        starShowPlay("finale", 2300);
+        celebrate();
+      } else {
+        starShowPlay(themeFor(habit.name), 1150);
+      }
+    }
+  }
+
+  // ---------- Calendar light show ----------
+  // Pick a themed animation from words in the habit's name.
+  function themeFor(name) {
+    const n = (name || "").toLowerCase();
+    const has = (re) => re.test(n);
+    if (has(/water|drink|hydrate|tea|coffee/)) return "water";
+    if (has(/read|book|study|learn|review/)) return "read";
+    if (has(/run|walk|jog|exercise|workout|gym|cardio|step|move|fit|bike|swim/)) return "run";
+    if (has(/meditat|breath|calm|yoga|mindful|relax|zen|pray/)) return "meditate";
+    if (has(/sleep|bed|rest|nap|wake/)) return "sleep";
+    if (has(/music|guitar|piano|sing|practice|instrument|song|drum/)) return "music";
+    if (has(/write|journal|draw|paint|create|art|sketch|design|blog/)) return "write";
+    return "sparkle";
+  }
+
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  // Each generator returns a 0..1 brightness for cell (c,r) on a W×H grid at time t (0..1).
+  const SHOWS = {
+    water(c, r, t, W, H) {
+      const fill = easeOut(Math.min(1, t * 1.05));
+      const surf = (H - 1) * (1 - 0.72 * fill) + 0.8 * Math.sin(c * 0.9 + t * 14);
+      if (r > surf) return r - surf < 1.6 ? 1 : 0.6;
+      const drop = (t * 2 % 1) * (H - 1);
+      if (Math.abs(c - (W - 1) / 2) < 0.7 && Math.abs(r - drop) < 0.7 && drop < surf) return 1;
+      return 0;
+    },
+    read(c, r, t, W, H) {
+      if (r % 2 !== 0) return 0;
+      const lines = Math.ceil(H / 2);
+      const li = r / 2;
+      const per = 1 / lines;
+      const lt = (t - li * per) / per;
+      if (lt <= 0) return 0;
+      if (lt >= 1) return 0.6;
+      return c <= lt * (W - 1) ? 1 : 0;
+    },
+    run(c, r, t, W, H) {
+      const x = t * (W - 1);
+      const ground = Math.round(H * 0.7);
+      const y = ground - Math.abs(Math.sin(t * Math.PI * 7)) * (H * 0.22);
+      if (Math.hypot(c - x, r - y) < 1.1) return 1;
+      if (r === ground && c <= x) return c > x - 1.2 ? 0.85 : 0.4;
+      return 0;
+    },
+    meditate(c, r, t, W, H) {
+      const cx = (W - 1) / 2, cy = (H - 1) / 2;
+      const maxR = Math.min(W, H) * 0.42;
+      const breath = (1 - Math.cos(t * Math.PI * 2)) / 2;
+      const rad = maxR * (0.25 + 0.75 * breath);
+      return Math.abs(Math.hypot(c - cx, r - cy) - rad) < 0.95 ? 1 : 0;
+    },
+    sleep(c, r, t, W, H) {
+      const cx = W * 0.38, cy = H * 0.5, R = Math.min(W, H) * 0.32;
+      const d1 = Math.hypot(c - cx, r - cy);
+      const d2 = Math.hypot(c - (cx + R * 0.55), r - cy - R * 0.1);
+      let v = d1 - R < 0.95 && d1 - R > -0.95 && d2 > R * 0.95 ? 1 : 0;
+      const phase = (t * 2) % 1;
+      const zx = W * 0.72;
+      if (Math.hypot(c - zx, r - (H * 0.62 - phase * H * 0.45)) < 0.7) v = 1;
+      if (Math.hypot(c - (zx - 1.3), r - (H * 0.62 - ((phase + 0.5) % 1) * H * 0.45)) < 0.6) v = Math.max(v, 0.8);
+      return v;
+    },
+    music(c, r, t, W, H) {
+      const h = (0.45 + 0.45 * Math.sin(t * 14 + c * 0.9)) * (H - 1);
+      const top = H - 1 - h;
+      return r >= top ? (r < top + 1.3 ? 1 : 0.6) : 0;
+    },
+    write(c, r, t, W, H) {
+      const x = t * (W - 1);
+      const amp = H * 0.32, mid = (H - 1) / 2;
+      const y = mid + Math.sin(t * Math.PI * 4) * amp;
+      if (Math.hypot(c - x, r - y) < 1.0) return 1;
+      if (c < x) {
+        const py = mid + Math.sin((c / (W - 1)) * Math.PI * 4) * amp;
+        if (Math.abs(r - py) < 0.85) return 0.5;
+      }
+      return 0;
+    },
+    sparkle(c, r, t, W, H) {
+      const cx = (W - 1) / 2, cy = (H - 1) / 2;
+      const ring = Math.hypot(cx, cy) * easeOut(t);
+      let v = Math.abs(Math.hypot(c - cx, r - cy) - ring) < 1.3 ? 1 : 0;
+      const seed = Math.sin(c * 12.9898 + r * 78.233) * 43758.5453;
+      if (seed - Math.floor(seed) > 0.82 && Math.sin(t * 22 + c * 1.3 + r) > 0.5) v = Math.max(v, 0.85);
+      return v;
+    },
+    finale(c, r, t, W, H) {
+      let v = 0;
+      const bursts = [[0.25, 0.45, 0.0], [0.72, 0.32, 0.12], [0.5, 0.6, 0.24], [0.85, 0.62, 0.36], [0.15, 0.58, 0.46], [0.6, 0.25, 0.55]];
+      for (const b of bursts) {
+        const lt = (t - b[2]) / 0.45;
+        if (lt > 0 && lt < 1) {
+          const d = Math.hypot(c - b[0] * (W - 1), r - b[1] * (H - 1));
+          const rad = Math.min(W, H) * 0.45 * easeOut(lt);
+          if (Math.abs(d - rad) < 1.4) v = Math.max(v, 1 - lt * 0.4);
+        }
+      }
+      if (t > 0.72) {
+        const sweep = ((t - 0.72) / 0.28) * (W + H + 4);
+        if (Math.abs(c + r - sweep) < 2.2) v = Math.max(v, 1);
+      }
+      return v;
+    },
+  };
+
+  let starCtx = null, starRAF = 0;
+  function starPath(ctx, x, y, R) {
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+      const px = x + Math.cos(a) * R, py = y + Math.sin(a) * R;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      const a2 = a + Math.PI / 5;
+      ctx.lineTo(x + Math.cos(a2) * R * 0.42, y + Math.sin(a2) * R * 0.42);
+    }
+    ctx.closePath();
+  }
+  function drawShowStar(ctx, x, y, R, inten) {
+    const white = inten > 0.8;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, inten));
+    ctx.fillStyle = white ? "#ffffff" : "#ff5a2e";
+    ctx.shadowColor = white ? "rgba(255,255,255,0.9)" : "rgba(255,90,46,0.9)";
+    ctx.shadowBlur = R * 0.8;
+    ctx.beginPath();
+    starPath(ctx, x, y, R);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function starShowPlay(key, duration) {
+    if (reduceMotion || !starShowCanvas || !starShowCanvas.getContext) return;
+    const gen = SHOWS[key] || SHOWS.sparkle;
+    const rect = calendarArea.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    starCtx = starCtx || starShowCanvas.getContext("2d");
+    starShowCanvas.width = window.innerWidth * dpr;
+    starShowCanvas.height = window.innerHeight * dpr;
+    starCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const pad = 10;
+    const RW = rect.width - pad * 2, RH = rect.height - pad * 2;
+    const cell = Math.max(15, Math.min(42, Math.round(Math.min(RW / 22, RH / 12))));
+    const GW = Math.max(8, Math.floor(RW / cell));
+    const GH = Math.max(6, Math.floor(RH / cell));
+    const offX = rect.left + (rect.width - GW * cell) / 2 + cell / 2;
+    const offY = rect.top + (rect.height - GH * cell) / 2 + cell / 2;
+    const starR = cell * 0.42;
+
+    cancelAnimationFrame(starRAF);
+    let start = null;
+    function frame(ts) {
+      if (!start) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      starCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      let bd;
+      if (t < 0.12) bd = (t / 0.12) * 0.72;
+      else if (t > 0.8) bd = (1 - (t - 0.8) / 0.2) * 0.72;
+      else bd = 0.72;
+      starCtx.fillStyle = "rgba(6,6,6," + bd + ")";
+      starCtx.fillRect(rect.left, rect.top, rect.width, rect.height);
+
+      const fade = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
+      for (let r = 0; r < GH; r++) {
+        for (let c = 0; c < GW; c++) {
+          let inten = gen(c, r, t, GW, GH);
+          if (inten <= 0.04) continue;
+          drawShowStar(starCtx, offX + c * cell, offY + r * cell, starR, Math.min(1, inten) * fade);
+        }
+      }
+      if (t < 1) starRAF = requestAnimationFrame(frame);
+      else starCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+    starRAF = requestAnimationFrame(frame);
   }
 
   function burst(star) {

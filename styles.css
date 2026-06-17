@@ -204,21 +204,10 @@ button { font-family: inherit; cursor: pointer; }
   letter-spacing: -0.02em;
 }
 
-/* All habits done today: orange ring with a glow + shimmer (no yellow) */
-.ring-wrap.complete .ring-progress { filter: drop-shadow(0 0 5px rgba(255, 90, 46, 0.85)); }
+/* All habits done today: ring simply reads orange (the celebration happens in
+   the calendar, not on the ring) */
+.ring-wrap.complete .ring-progress { filter: drop-shadow(0 0 4px rgba(255, 90, 46, 0.7)); }
 .ring-wrap.complete .ring-label { color: var(--accent); }
-.ring-wrap.complete::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.55) 50deg, rgba(255, 90, 46, 0.5) 90deg, transparent 130deg);
-  animation: shimmerSpin 2.4s linear infinite;
-  pointer-events: none;
-  z-index: -1;
-  filter: blur(2px);
-}
-@keyframes shimmerSpin { to { transform: rotate(360deg); } }
 .ring-wrap.pop { animation: ringPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 @keyframes ringPop {
   0% { transform: scale(1); }
@@ -647,7 +636,8 @@ button { font-family: inherit; cursor: pointer; }
   50% { transform: translateY(-5px) rotate(-2deg); }
 }
 
-/* Confetti */
+/* Star light-show + confetti */
+#starShow { position: fixed; inset: 0; pointer-events: none; z-index: 44; }
 #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
 
 /* Reduced motion */

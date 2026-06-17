@@ -1,10 +1,13 @@
 # Good Habits ⭐
 
-A simple, beautiful habit tracker inspired by Simone Giertz's *Every Day Calendar*.
+**Light up a star for every day you keep a habit.** A simple, beautiful habit
+tracker — free, private (everything saves right in your browser), and open
+source. → **[habit.nathantowianski.com](https://habit.nathantowianski.com)**
 
-Pick a habit, then light up a star for every day you keep it. Over a year, the
-stars paint a picture of your consistency. No accounts, no servers — everything
-saves right in your browser.
+Inspired by Simone Giertz's *Every Day Calendar*. Pick your habits and light up
+a star for every day you keep them; over a year the stars paint a picture of
+your consistency. A daily ring tracks all your habits at once and celebrates
+when you finish them for the day. No account, no tracking, no servers.
 
 ![Good Habits](shot-desktop.png)
 

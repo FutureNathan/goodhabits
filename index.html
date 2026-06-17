@@ -121,19 +121,6 @@
       </button>
     </div>
 
-    <!-- Layout -->
-    <div class="admin-section">
-      <div class="admin-section-title">Layout</div>
-      <div class="toggle-row">
-        <span class="toggle-label">Calendar direction</span>
-        <div class="seg" id="orientToggle" role="group" aria-label="Calendar direction">
-          <button class="seg-btn" type="button" data-orient="vertical">Vertical</button>
-          <button class="seg-btn" type="button" data-orient="horizontal">Horizontal</button>
-        </div>
-      </div>
-      <p class="admin-tip">Vertical runs the months across the top (best for tall / portrait screens). Horizontal lays the whole year out wide (best for laptops & monitors).</p>
-    </div>
-
     <!-- Year -->
     <div class="admin-section">
       <div class="admin-section-title">Year</div>
@@ -160,6 +147,24 @@
       <p class="admin-tip">Drag the handle (or use the arrows) to set the order you tap through.</p>
     </div>
 
+    <!-- Layout -->
+    <div class="admin-section">
+      <div class="admin-section-title">Layout</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Calendar direction</span>
+        <div class="seg" id="orientToggle" role="group" aria-label="Calendar direction">
+          <button class="seg-btn" type="button" data-orient="vertical">Vertical</button>
+          <button class="seg-btn" type="button" data-orient="horizontal">Horizontal</button>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Edit past days</span>
+        <button class="switch" id="pastToggle" type="button" role="switch" aria-checked="true" aria-label="Allow editing past days">
+          <span class="knob"></span>
+        </button>
+      </div>
+    </div>
+
     <!-- Data -->
     <div class="admin-section">
       <div class="admin-section-title">Your data</div>
@@ -178,7 +183,7 @@
       <p class="admin-tip">View the code, file an idea, or make it your own.</p>
       <a class="made-by" href="https://nathantowianski.com" target="_blank" rel="noopener" title="Visit Nathan's website">
         Made with <span class="heart">❤️</span> by <span class="name">Nathan</span>
-        <img class="astronaut" src="Astronaut%20Line%20V2.png" alt="" aria-hidden="true" />
+        <img class="astronaut" src="astronaut.png" alt="" aria-hidden="true" />
         <span class="go" aria-hidden="true">↗</span>
       </a>
     </div>

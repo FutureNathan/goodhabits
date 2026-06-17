@@ -31,6 +31,7 @@
   const habitList = el("habitList");
   const newHabitInput = el("newHabitInput");
   const orientToggle = el("orientToggle");
+  const pastToggle = el("pastToggle");
   const confettiCanvas = el("confetti");
 
   // ---------- Date helpers ----------
@@ -59,6 +60,7 @@
       currentIndex: 0,
       year: now.getFullYear(),
       orientation: defaultOrientation(),
+      editPast: true,
     };
   }
 
@@ -77,6 +79,7 @@
       data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
         ? data.orientation
         : defaultOrientation();
+      data.editPast = data.editPast !== false; // default on
       return data;
     } catch (e) {
       return defaultState();
@@ -245,6 +248,13 @@
     if (!habit) return;
 
     const dateStr = star.dataset.date;
+    // Optionally lock past days from being edited
+    if (!state.editPast && dateStr < todayStr) {
+      star.classList.remove("locked");
+      void star.offsetWidth;
+      star.classList.add("locked");
+      return;
+    }
     const nowDone = !habit.days[dateStr];
     if (nowDone) habit.days[dateStr] = true;
     else delete habit.days[dateStr];
@@ -328,10 +338,21 @@
     });
   }
 
+  function setEditPast(on) {
+    state.editPast = !!on;
+    save();
+    syncPastToggle();
+  }
+
+  function syncPastToggle() {
+    pastToggle.setAttribute("aria-checked", state.editPast ? "true" : "false");
+  }
+
   // ---------- Settings / admin panel ----------
   function openAdmin() {
     renderHabitList();
     syncOrientToggle();
+    syncPastToggle();
     adminOverlay.hidden = false;
     adminPanel.hidden = false;
   }
@@ -554,6 +575,7 @@
         data.currentIndex = clampIndex(data.currentIndex || 0, data.habits.length);
         data.orientation = data.orientation === "horizontal" || data.orientation === "vertical"
           ? data.orientation : defaultOrientation();
+        data.editPast = data.editPast !== false;
         state = data;
         wasComplete = isAllCompleteToday();
         save();
@@ -695,6 +717,7 @@
     const btn = e.target.closest(".seg-btn");
     if (btn) setOrientation(btn.dataset.orient);
   });
+  pastToggle.addEventListener("click", () => setEditPast(!state.editPast));
 
   el("exportBtn").addEventListener("click", exportData);
   el("importBtn").addEventListener("click", () => el("importFile").click());

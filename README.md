@@ -22,11 +22,14 @@ when you finish them for the day. No account, no tracking, no servers.
 - **Flip between habits** with the `‹` / `›` arrows (or the left/right keyboard
   arrows on a computer).
 - **Daily progress ring.** The ring in the corner shows how many of your habits
-  you've completed *today* (e.g. `3/4`). Every tap gives it a satisfying pop,
-  and finishing them all sets off a celebration. 🎉
-- **At-a-glance stats** under the title: which habit you're viewing (`1 / 3`),
-  how many days you've logged this year, and your current streak. A short
-  legend explains them on first visit.
+  you've completed *today* (e.g. `3/4`). Every tap gives it a satisfying pop.
+- **Calendar light shows.** Completing a day briefly animates the calendar's own
+  stars, themed to the habit's name — water rises for "drink water", an
+  equalizer bounces for "music", a runner dashes for "exercise", and so on.
+  Finish every habit for the day and the whole calendar erupts in a celebratory
+  finale. 🎉 (Respects `prefers-reduced-motion`.)
+- **At-a-glance stats** under the title: how many days you've logged this year,
+  and your current streak. A short legend explains them on first visit.
 - **Settings** (the gear icon, or tap the habit's name) let you:
   - Add and rename habits.
   - Reorder them (drag the handle, or use the up/down arrows) — this sets the

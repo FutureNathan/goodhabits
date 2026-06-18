@@ -18,7 +18,6 @@
   const emptyState = el("emptyState");
   const statsRow = el("statsRow");
   const habitNameBtn = el("habitName");
-  const statHabit = el("statHabit");
   const statDays = el("statDays");
   const statStreak = el("statStreak");
   const statYear = el("statYear");
@@ -34,6 +33,7 @@
   const pastToggle = el("pastToggle");
   const tzSelect = el("tzSelect");
   const confettiCanvas = el("confetti");
+  const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ---------- Date helpers ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -179,7 +179,6 @@
 
     if (!habit) {
       habitNameBtn.textContent = "No habits yet";
-      statHabit.textContent = "0 / 0";
       statDays.textContent = "0";
       statStreak.textContent = "0";
       statStreak.parentElement.classList.remove("hot");
@@ -188,7 +187,6 @@
       return;
     }
     habitNameBtn.textContent = habit.name || "Untitled habit";
-    statHabit.textContent = `${state.currentIndex + 1} / ${total}`;
     statDays.textContent = countDays(habit, state.year);
     const streak = currentStreak(habit);
     statStreak.textContent = streak;
@@ -216,6 +214,7 @@
   }
 
   function renderCalendar() {
+    cleanupShow(); // stop any running light show before rebuilding the grid
     const habit = currentHabit();
     calendar.className = "calendar " + state.orientation;
     calendar.innerHTML = "";
@@ -262,7 +261,6 @@
       ringWrap.classList.remove("pop");
       void ringWrap.offsetWidth;
       ringWrap.classList.add("pop");
-      if (complete && !wasComplete) celebrate();
     }
     wasComplete = complete;
   }
@@ -282,6 +280,7 @@
       star.classList.add("locked");
       return;
     }
+    const wasAllToday = isAllCompleteToday();
     const nowDone = !habit.days[dateStr];
     if (nowDone) habit.days[dateStr] = true;
     else delete habit.days[dateStr];
@@ -295,6 +294,17 @@
     save();
     renderHeader();
     if (dateStr === todayStr) updateRing(true);
+
+    // Light show across the existing calendar stars when completing a day
+    if (nowDone) {
+      const allNow = isAllCompleteToday();
+      if (allNow && !wasAllToday) {
+        starShowPlay("finale", 2300);
+        celebrate();
+      } else {
+        starShowPlay(themeFor(habit.name), 1200);
+      }
+    }
   }
 
   function burst(star) {
@@ -321,6 +331,178 @@
         { duration: 520, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
       ).onfinish = () => p.remove();
     }
+  }
+
+  // ---------- Calendar light show (lights the EXISTING stars) ----------
+  function themeFor(name) {
+    const n = (name || "").toLowerCase();
+    const has = (re) => re.test(n);
+    if (has(/water|drink|hydrate|tea|coffee/)) return "water";
+    if (has(/read|book|study|learn|review/)) return "read";
+    if (has(/run|walk|jog|exercise|workout|gym|cardio|step|move|fit|bike|swim/)) return "run";
+    if (has(/meditat|breath|calm|yoga|mindful|relax|zen|pray/)) return "meditate";
+    if (has(/sleep|bed|rest|nap|wake/)) return "sleep";
+    if (has(/music|guitar|piano|sing|practice|instrument|song|drum/)) return "music";
+    if (has(/write|journal|draw|paint|create|art|sketch|design|blog/)) return "write";
+    return "sparkle";
+  }
+
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  // Each generator returns 0..1 brightness for cell (c,r) on a W×H grid at time t (0..1).
+  const SHOWS = {
+    water(c, r, t, W, H) {
+      const fill = easeOut(Math.min(1, t * 1.05));
+      const surf = (H - 1) * (1 - 0.72 * fill) + 0.8 * Math.sin(c * 0.9 + t * 14);
+      if (r > surf) return r - surf < 1.6 ? 1 : 0.6;
+      const drop = (t * 2 % 1) * (H - 1);
+      if (Math.abs(c - (W - 1) / 2) < 0.7 && Math.abs(r - drop) < 0.7 && drop < surf) return 1;
+      return 0;
+    },
+    read(c, r, t, W, H) {
+      if (r % 2 !== 0) return 0;
+      const lines = Math.ceil(H / 2);
+      const lt = (t - (r / 2) / lines) / (1 / lines);
+      if (lt <= 0) return 0;
+      if (lt >= 1) return 0.6;
+      return c <= lt * (W - 1) ? 1 : 0;
+    },
+    run(c, r, t, W, H) {
+      const x = t * (W - 1);
+      const ground = Math.round(H * 0.7);
+      const y = ground - Math.abs(Math.sin(t * Math.PI * 7)) * (H * 0.22);
+      if (Math.hypot(c - x, r - y) < 1.1) return 1;
+      if (r === ground && c <= x) return c > x - 1.2 ? 0.85 : 0.4;
+      return 0;
+    },
+    meditate(c, r, t, W, H) {
+      const cx = (W - 1) / 2, cy = (H - 1) / 2;
+      const breath = (1 - Math.cos(t * Math.PI * 2)) / 2;
+      const rad = Math.min(W, H) * 0.42 * (0.25 + 0.75 * breath);
+      return Math.abs(Math.hypot(c - cx, r - cy) - rad) < 0.95 ? 1 : 0;
+    },
+    sleep(c, r, t, W, H) {
+      const cx = W * 0.38, cy = H * 0.5, R = Math.min(W, H) * 0.32;
+      const d1 = Math.hypot(c - cx, r - cy);
+      const d2 = Math.hypot(c - (cx + R * 0.55), r - cy - R * 0.1);
+      let v = Math.abs(d1 - R) < 0.95 && d2 > R * 0.95 ? 1 : 0;
+      const phase = (t * 2) % 1;
+      if (Math.hypot(c - W * 0.72, r - (H * 0.62 - phase * H * 0.45)) < 0.7) v = 1;
+      if (Math.hypot(c - (W * 0.72 - 1.3), r - (H * 0.62 - ((phase + 0.5) % 1) * H * 0.45)) < 0.6) v = Math.max(v, 0.8);
+      return v;
+    },
+    music(c, r, t, W, H) {
+      const h = (0.45 + 0.45 * Math.sin(t * 14 + c * 0.9)) * (H - 1);
+      const top = H - 1 - h;
+      return r >= top ? (r < top + 1.3 ? 1 : 0.6) : 0;
+    },
+    write(c, r, t, W, H) {
+      const x = t * (W - 1);
+      const amp = H * 0.32, mid = (H - 1) / 2;
+      if (Math.hypot(c - x, r - (mid + Math.sin(t * Math.PI * 4) * amp)) < 1.0) return 1;
+      if (c < x && Math.abs(r - (mid + Math.sin((c / (W - 1)) * Math.PI * 4) * amp)) < 0.85) return 0.5;
+      return 0;
+    },
+    sparkle(c, r, t, W, H) {
+      const cx = (W - 1) / 2, cy = (H - 1) / 2;
+      const ring = Math.hypot(cx, cy) * easeOut(t);
+      let v = Math.abs(Math.hypot(c - cx, r - cy) - ring) < 1.3 ? 1 : 0;
+      const seed = Math.sin(c * 12.9898 + r * 78.233) * 43758.5453;
+      if (seed - Math.floor(seed) > 0.82 && Math.sin(t * 22 + c * 1.3 + r) > 0.5) v = Math.max(v, 0.85);
+      return v;
+    },
+    finale(c, r, t, W, H) {
+      let v = 0;
+      const bursts = [[0.25, 0.45, 0.0], [0.72, 0.32, 0.12], [0.5, 0.6, 0.24], [0.85, 0.62, 0.36], [0.15, 0.58, 0.46], [0.6, 0.25, 0.55]];
+      for (const b of bursts) {
+        const lt = (t - b[2]) / 0.45;
+        if (lt > 0 && lt < 1) {
+          const d = Math.hypot(c - b[0] * (W - 1), r - b[1] * (H - 1));
+          const rad = Math.min(W, H) * 0.5 * easeOut(lt);
+          if (Math.abs(d - rad) < 1.4) v = Math.max(v, 1 - lt * 0.4);
+        }
+      }
+      if (t > 0.72) {
+        const sweep = ((t - 0.72) / 0.28) * (W + H + 4);
+        if (Math.abs(c + r - sweep) < 2.2) v = Math.max(v, 1);
+      }
+      return v;
+    },
+  };
+
+  let showRAF = 0;
+  let showItems = null; // stars currently participating in a show
+
+  function uniqSorted(vals, tol) {
+    const sorted = [...vals].sort((a, b) => a - b);
+    const out = [];
+    for (const v of sorted) if (!out.length || v - out[out.length - 1] > tol) out.push(v);
+    return out;
+  }
+  function nearestIndex(arr, v) {
+    let bi = 0, bd = Infinity;
+    for (let i = 0; i < arr.length; i++) {
+      const d = Math.abs(arr[i] - v);
+      if (d < bd) { bd = d; bi = i; }
+    }
+    return bi;
+  }
+
+  function cleanupShow() {
+    if (showRAF) cancelAnimationFrame(showRAF);
+    showRAF = 0;
+    calendar.classList.remove("showing");
+    calendar.querySelectorAll(".show-on, .show-hi").forEach((s) => s.classList.remove("show-on", "show-hi"));
+    showItems = null;
+  }
+
+  function starShowPlay(key, duration) {
+    if (reduceMotion) return;
+    const gen = SHOWS[key] || SHOWS.sparkle;
+    const all = [...calendar.querySelectorAll(".star:not(.empty)")];
+    if (!all.length) return;
+
+    // Prefer the stars currently visible in the calendar viewport, so the
+    // show always plays where you're looking.
+    const area = calendarArea.getBoundingClientRect();
+    const measured = all.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { el, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+    });
+    let use = measured.filter((m) => m.cy >= area.top - 2 && m.cy <= area.bottom + 2 && m.cx >= area.left - 2 && m.cx <= area.right + 2);
+    if (use.length < 6) use = measured;
+
+    const cols = uniqSorted(use.map((m) => m.cx), 8);
+    const rows = uniqSorted(use.map((m) => m.cy), 8);
+    const GW = cols.length, GH = rows.length;
+    use.forEach((m) => { m.col = nearestIndex(cols, m.cx); m.row = nearestIndex(rows, m.cy); });
+
+    cleanupShow();
+    calendar.classList.add("showing");
+    showItems = use;
+    const last = new Array(use.length).fill(0); // 0 none, 1 on, 2 hi
+
+    let start = null;
+    function frame(ts) {
+      if (!start) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      const fade = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
+      for (let k = 0; k < use.length; k++) {
+        const m = use[k];
+        const inten = gen(m.col, m.row, t, GW, GH) * fade;
+        const desired = inten > 0.8 ? 2 : inten > 0.18 ? 1 : 0;
+        if (desired !== last[k]) {
+          const cl = m.el.classList;
+          if (desired === 2) { cl.add("show-hi"); cl.remove("show-on"); }
+          else if (desired === 1) { cl.add("show-on"); cl.remove("show-hi"); }
+          else { cl.remove("show-on", "show-hi"); }
+          last[k] = desired;
+        }
+      }
+      if (t < 1) showRAF = requestAnimationFrame(frame);
+      else cleanupShow();
+    }
+    showRAF = requestAnimationFrame(frame);
   }
 
   // ---------- Navigation ----------

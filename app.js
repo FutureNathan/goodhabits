@@ -348,6 +348,21 @@
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
+  // Wrap a flag "sampler" (normalized u,v -> 'o' orange / 'w' white / '' off)
+  // into a show generator that wipes the flag in, gives it a gentle wave, and
+  // renders it in the app's orange/white/gray palette.
+  function flagShow(sampler) {
+    return function (c, r, t, W, H) {
+      const u0 = W > 1 ? c / (W - 1) : 0.5;
+      const v = H > 1 ? r / (H - 1) : 0.5;
+      const reveal = Math.min(1, t / 0.32);
+      if (u0 > reveal) return 0;
+      const u = Math.min(0.999, Math.max(0, u0 + 0.045 * Math.sin(v * 6 + t * 7)));
+      const s = sampler(u, v);
+      return s === "w" ? 0.95 : s === "o" ? 0.5 : 0;
+    };
+  }
+
   // Each generator returns 0..1 brightness for cell (c,r) on a W×H grid at time t (0..1).
   const SHOWS = {
     water(c, r, t, W, H) {
@@ -427,7 +442,59 @@
       }
       return v;
     },
+
+    // Stylized national flags (orange/white/gray), keyed by time zone below.
+    fVert3: flagShow((u, v) => (Math.floor(Math.min(0.999, u) * 3) === 1 ? "w" : "o")),
+    fHoriz3: flagShow((u, v) => (Math.floor(Math.min(0.999, v) * 3) === 1 ? "w" : "o")),
+    fNordic: flagShow((u, v) => (Math.abs(u - 0.34) < 0.09 || Math.abs(v - 0.5) < 0.11 ? "w" : "o")),
+    fSun: flagShow((u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.2 ? "o" : "")),
+    fCrescent: flagShow((u, v) => {
+      const d1 = Math.hypot(u - 0.4, v - 0.5), d2 = Math.hypot(u - 0.49, v - 0.5);
+      if (d1 < 0.22 && d2 > 0.18) return "w";
+      if (Math.hypot(u - 0.6, v - 0.5) < 0.055) return "w";
+      return "o";
+    }),
+    fUSA: flagShow((u, v) => {
+      if (u < 0.4 && v < 0.54) return "w";
+      return Math.floor(Math.min(0.999, v) * 7) % 2 === 0 ? "o" : "";
+    }),
+    fCanada: flagShow((u, v) => {
+      if (u < 0.26 || u > 0.74) return "o";
+      return Math.hypot(u - 0.5, v - 0.5) < 0.13 ? "o" : "w";
+    }),
+    fUK: flagShow((u, v) => {
+      if (Math.abs(u - 0.5) < 0.09 || Math.abs(v - 0.5) < 0.11) return "w";
+      if (Math.min(Math.abs(u - v), Math.abs(u - (1 - v))) < 0.09) return "o";
+      return "";
+    }),
+    fChina: flagShow((u, v) => {
+      if (Math.hypot(u - 0.2, v - 0.3) < 0.08) return "w";
+      if (Math.hypot(u - 0.34, v - 0.18) < 0.04) return "w";
+      if (Math.hypot(u - 0.37, v - 0.3) < 0.04) return "w";
+      if (Math.hypot(u - 0.34, v - 0.42) < 0.04) return "w";
+      if (Math.hypot(u - 0.27, v - 0.5) < 0.04) return "w";
+      return "o";
+    }),
+    fGeneric: flagShow((u, v) => (Math.abs(v - (0.5 + 0.16 * Math.sin(u * 6.2))) < 0.13 ? "w" : "o")),
   };
+
+  // Time zone -> flag generator key (curated; falls back to a generic banner).
+  const FLAG_BY_TZ = {};
+  (function () {
+    const m = {
+      fUSA: ["America/New_York", "America/Detroit", "America/Chicago", "America/Denver", "America/Boise", "America/Phoenix", "America/Los_Angeles", "America/Anchorage", "America/Adak", "Pacific/Honolulu", "America/Indiana/Indianapolis", "America/Indianapolis", "America/Kentucky/Louisville"],
+      fCanada: ["America/Toronto", "America/Vancouver", "America/Edmonton", "America/Winnipeg", "America/Halifax", "America/St_Johns", "America/Regina", "America/Montreal"],
+      fVert3: ["America/Mexico_City", "America/Cancun", "America/Tijuana", "Europe/Paris", "Europe/Rome", "Europe/Dublin", "Europe/Lisbon", "Asia/Dubai"],
+      fHoriz3: ["Europe/Berlin", "Europe/Amsterdam", "Europe/Madrid", "Europe/Moscow", "Asia/Yekaterinburg", "Asia/Novosibirsk", "Asia/Vladivostok", "Asia/Kolkata", "Asia/Calcutta", "America/Argentina/Buenos_Aires"],
+      fNordic: ["Europe/Stockholm", "Europe/Oslo", "Europe/Copenhagen", "Europe/Helsinki", "Atlantic/Reykjavik"],
+      fSun: ["Asia/Tokyo", "Asia/Dhaka"],
+      fCrescent: ["Europe/Istanbul", "Asia/Istanbul", "Asia/Karachi", "Asia/Singapore", "Asia/Kuala_Lumpur"],
+      fUK: ["Europe/London"],
+      fChina: ["Asia/Shanghai", "Asia/Chongqing", "Asia/Urumqi", "Asia/Hong_Kong"],
+    };
+    for (const key in m) for (const tz of m[key]) FLAG_BY_TZ[tz] = key;
+  })();
+  const flagFor = (tz) => FLAG_BY_TZ[tz] || "fGeneric";
 
   let showRAF = 0;
   let showItems = null; // stars currently participating in a show
@@ -579,12 +646,15 @@
     const list = zones || [...tzSelect.options].map((o) => o.value);
     tzSelect.value = cur !== "auto" && list.indexOf(cur) !== -1 ? cur : "auto";
   }
+  let pendingFlag = null;
   function setTimezone(tz) {
     state.timezone = tz || "auto";
     save();
     refreshToday();
     renderAll();
     if (!adminPanel.hidden) renderHabitList();
+    // Wave the country's flag once Settings closes (so it's visible).
+    pendingFlag = flagFor(activeTz());
   }
 
   // ---------- Settings / admin panel ----------
@@ -601,6 +671,11 @@
     adminOverlay.hidden = true;
     adminPanel.hidden = true;
     clearConfirms();
+    if (pendingFlag) {
+      const f = pendingFlag;
+      pendingFlag = null;
+      setTimeout(() => starShowPlay(f, 1700), 80);
+    }
   }
 
   function clearConfirms() {

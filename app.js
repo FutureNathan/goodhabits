@@ -363,6 +363,15 @@
     else delete habit.days[dateStr];
 
     star.classList.toggle("done", nowDone);
+
+    // Keep the tapped star showing its true state (white = today, orange = done)
+    // above the light show's dimming, so a tap is always a clean toggle and
+    // never looks like it "turned gray". cleanupShow() deliberately leaves
+    // "pinned" alone so it holds through the themed-show -> finale chain; the
+    // next tap (below) or a re-render clears it.
+    calendar.querySelectorAll(".star.pinned").forEach((s) => s.classList.remove("pinned"));
+    star.classList.add("pinned");
+
     star.classList.remove("pop");
     void star.offsetWidth;
     star.classList.add("pop");

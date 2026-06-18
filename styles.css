@@ -339,6 +339,24 @@ button { font-family: inherit; cursor: pointer; }
   filter: drop-shadow(0 0 3px var(--sc, rgba(255, 90, 46, 0.6)));
 }
 
+/* The star you just tapped keeps showing its real state through the show
+   instead of dimming with the rest of the calendar, so a tap on today always
+   reads as a clean white (today) <-> orange (done) toggle — never a lingering
+   gray. These sit after .show-lit so they win for the pinned star. */
+.calendar.showing .star.pinned::before {
+  background: var(--star-off);
+  filter: none;
+  transition: none;
+}
+.calendar.showing .star.pinned.today:not(.done)::before {
+  background: #fff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
+}
+.calendar.showing .star.pinned.done::before {
+  background: var(--accent);
+  filter: drop-shadow(0 0 4px rgba(255, 90, 46, 0.55));
+}
+
 /* Locked (past day, editing disabled) — quick shake to signal it's locked */
 .star.locked::before { animation: lockShake 0.3s ease; }
 @keyframes lockShake {

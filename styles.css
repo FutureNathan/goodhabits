@@ -222,10 +222,10 @@ button { font-family: inherit; cursor: pointer; }
   min-height: 0;
   position: relative;
   overflow: auto;
-  /* No top padding: a sticky header with top:0 sticks at the content edge, so
-     any top padding would leave a strip above it where scrolled stars peek out.
-     Top spacing is provided by the stats row / month nav above instead. */
-  padding: 0 clamp(12px, 3vw, 30px) max(18px, env(safe-area-inset-bottom));
+  /* No top/side padding: a sticky header (top:0 / left:0) sticks at the content
+     edge, so padding on that side would leave a strip where scrolled stars peek
+     past the labels. The grid centers itself via margin:auto instead. */
+  padding: 0 0 max(18px, env(safe-area-inset-bottom));
   overscroll-behavior: contain; /* don't chain overscroll to the page (no refresh) */
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;

@@ -590,8 +590,21 @@
     showItems = use;
     const last = new Array(use.length).fill(""); // last colour token per star ("" = off)
 
+    // finish() removes the dim "showing" state and runs onDone exactly once.
+    // It is driven by BOTH the rAF loop (when it runs) and a setTimeout, so the
+    // just-completed star always lights up at the end of its animation even if
+    // iOS Safari pauses/throttles requestAnimationFrame during touch.
+    let finished = false;
+    function finish() {
+      if (finished || showToken !== myToken) return;
+      finished = true;
+      cleanupShow();
+      if (typeof onDone === "function") onDone();
+    }
+
     let start = null;
     function frame(ts) {
+      if (finished || showToken !== myToken) return; // superseded or already done
       if (!start) start = ts;
       const t = Math.min(1, (ts - start) / duration);
       const fade = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
@@ -615,13 +628,10 @@
         }
       }
       if (t < 1) showRAF = requestAnimationFrame(frame);
-      else { cleanupShow(); if (typeof onDone === "function") onDone(); }
+      else finish();
     }
     showRAF = requestAnimationFrame(frame);
-    // Safety net: never let the dimming "showing" state get stuck (which would
-    // leave a just-completed star looking gray), even if the rAF loop is
-    // interrupted (tab backgrounded, throttled, etc.).
-    setTimeout(() => { if (showToken === myToken) cleanupShow(); }, duration + 600);
+    setTimeout(finish, duration + 120); // reliable cleanup regardless of rAF
   }
 
   // ---------- Navigation ----------
@@ -954,19 +964,13 @@
 
       const actions = document.createElement("div");
       actions.className = "item-actions";
-      const viewBtn = miniBtn("View this habit", '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>', () => {
-        state.currentIndex = i;
-        save();
-        renderAll();
-        renderHabitList();
-      });
       const upBtn = miniBtn("Move up", '<path d="M18 15l-6-6-6 6"/>', () => moveHabit(i, -1));
       upBtn.disabled = i === 0;
       const downBtn = miniBtn("Move down", '<path d="M6 9l6 6 6-6"/>', () => moveHabit(i, 1));
       downBtn.disabled = i === state.habits.length - 1;
       const delBtn = miniBtn("Delete habit", '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', () => askDelete(li));
       delBtn.classList.add("danger");
-      actions.append(viewBtn, upBtn, downBtn, delBtn);
+      actions.append(upBtn, downBtn, delBtn);
       li.appendChild(actions);
 
       habitList.appendChild(li);

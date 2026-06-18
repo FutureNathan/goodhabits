@@ -15,10 +15,12 @@ when you finish them for the day. No account, no tracking, no servers.
 
 - **A star for every day of the year.** Tap a star to mark the habit done that
   day; tap again to undo. Today's star is highlighted white until you complete it.
-- **Vertical or horizontal layout.** Flip the calendar in Settings — *vertical*
-  (months across the top) suits tall/portrait screens, *horizontal* (the whole
-  year laid out wide) suits laptops and monitors. It defaults to match your
-  screen's shape.
+- **Yearly or monthly, vertical or horizontal.** In Settings, switch between a
+  whole-year grid and a single-month view, and flip the direction — *vertical*
+  (months/weekdays down the side) suits tall/portrait screens, *horizontal*
+  suits laptops and monitors. Direction defaults to match your screen's shape;
+  monthly view adds a `‹ June 2026 ›` navigator. The light shows play in any
+  combination.
 - **Flip between habits** with the `‹` / `›` arrows (or the left/right keyboard
   arrows on a computer).
 - **Daily progress ring.** The ring in the corner shows how many of your habits
@@ -36,7 +38,8 @@ when you finish them for the day. No account, no tracking, no servers.
     order you flip through them.
   - Delete a habit, with a confirmation step so you never lose one by accident.
   - Switch years with the `‹ 2026 ›` control (plus a "This year" shortcut).
-  - Toggle the calendar direction, lock past days from editing (so you only
+  - Switch the calendar view (**yearly / monthly**) and direction
+    (**vertical / horizontal**), lock past days from editing (so you only
     check off today), and set your **time zone** so "today" is always correct —
     changing it waves a stylized flag of your country across the stars.
   - **Download a backup** of all your habits and history, and **restore** one

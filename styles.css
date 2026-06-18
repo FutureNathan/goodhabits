@@ -229,6 +229,7 @@ button { font-family: inherit; cursor: pointer; }
 .calendar-area::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9px; }
 .calendar-area::-webkit-scrollbar-track { background: transparent; }
 
+/* grid-template-columns is set inline by app.js (varies by view/orientation) */
 .calendar {
   display: grid;
   gap: clamp(3px, 0.5vw, 6px);
@@ -236,8 +237,22 @@ button { font-family: inherit; cursor: pointer; }
   width: max-content;
   max-width: 100%;
 }
-.calendar.vertical { grid-template-columns: 24px repeat(12, minmax(26px, 46px)); }
-.calendar.horizontal { grid-template-columns: 32px repeat(31, minmax(20px, 42px)); }
+
+/* Month navigator (monthly view) */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px 12px;
+}
+.month-nav #monthLabel {
+  font-weight: 700;
+  font-size: 16px;
+  min-width: 150px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
 .cal-corner { position: sticky; top: 0; left: 0; z-index: 3; background: var(--bg); }
 
@@ -707,8 +722,6 @@ button { font-family: inherit; cursor: pointer; }
   .stat-value { font-size: 16px; }
   .stat-label { font-size: 8.5px; letter-spacing: 0.05em; }
   .calendar { gap: 3px; }
-  .calendar.vertical { grid-template-columns: 20px repeat(12, minmax(20px, 1fr)); width: 100%; }
-  .calendar.horizontal { grid-template-columns: 26px repeat(31, minmax(16px, 30px)); }
   .col-head { font-size: 9.5px; }
   .row-head { font-size: 8.5px; padding-right: 3px; }
 }

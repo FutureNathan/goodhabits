@@ -82,6 +82,17 @@
       </div>
     </div>
 
+    <!-- Month navigator (monthly view only) -->
+    <div class="month-nav" id="monthNav" hidden>
+      <button class="year-btn" id="prevMonth" aria-label="Previous month">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span id="monthLabel">June 2026</span>
+      <button class="year-btn" id="nextMonth" aria-label="Next month">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
     <!-- Calendar -->
     <main class="calendar-area" id="calendarArea">
       <div class="calendar" id="calendar"></div>
@@ -158,6 +169,13 @@
         <button class="switch" id="pastToggle" type="button" role="switch" aria-checked="true" aria-label="Allow editing past days">
           <span class="knob"></span>
         </button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Calendar view</span>
+        <div class="seg" id="viewToggle" role="group" aria-label="Calendar view">
+          <button class="seg-btn" type="button" data-view="year">Yearly</button>
+          <button class="seg-btn" type="button" data-view="month">Monthly</button>
+        </div>
       </div>
       <div class="toggle-row">
         <span class="toggle-label">Time zone</span>

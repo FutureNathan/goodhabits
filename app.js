@@ -9,6 +9,8 @@
   const STORAGE_KEY = "goodhabits.v1";
   const INTRO_KEY = "goodhabits.introSeen.v1";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const RING_C = 2 * Math.PI * 52;
 
   // ---------- DOM ----------
@@ -31,6 +33,9 @@
   const newHabitInput = el("newHabitInput");
   const orientToggle = el("orientToggle");
   const pastToggle = el("pastToggle");
+  const viewToggle = el("viewToggle");
+  const monthNav = el("monthNav");
+  const monthLabel = el("monthLabel");
   const tzSelect = el("tzSelect");
   const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -60,9 +65,11 @@
   }
   let todayStr = computeToday(deviceTz);
   let todayYear = Number(todayStr.slice(0, 4));
+  let todayMonth = Number(todayStr.slice(5, 7)) - 1;
   const activeTz = () => (!state || !state.timezone || state.timezone === "auto" ? deviceTz : state.timezone);
   function refreshToday() {
     todayStr = computeToday(activeTz());
+    todayMonth = Number(todayStr.slice(5, 7)) - 1;
     todayYear = Number(todayStr.slice(0, 4));
   }
 
@@ -83,10 +90,17 @@
       ],
       currentIndex: 0,
       year: todayYear,
+      month: todayMonth,
+      view: "year",
       orientation: defaultOrientation(),
       editPast: true,
       timezone: "auto",
     };
+  }
+
+  function normalizeView(data) {
+    data.view = data.view === "month" ? "month" : "year";
+    data.month = Number.isInteger(data.month) && data.month >= 0 && data.month <= 11 ? data.month : todayMonth;
   }
 
   function load() {
@@ -106,6 +120,7 @@
         : defaultOrientation();
       data.editPast = data.editPast !== false; // default on
       data.timezone = typeof data.timezone === "string" ? data.timezone : "auto";
+      normalizeView(data);
       return data;
     } catch (e) {
       return defaultState();
@@ -138,6 +153,13 @@
     return n;
   }
 
+  function countDaysInMonth(habit, year, month) {
+    const prefix = `${year}-${pad(month + 1)}-`;
+    let n = 0;
+    for (const k in habit.days) if (habit.days[k] && k.startsWith(prefix)) n++;
+    return n;
+  }
+
   // Consecutive completed days ending today (or yesterday, so an unlogged
   // "today" doesn't look like a broken streak before you've checked in).
   function currentStreak(habit) {
@@ -163,18 +185,22 @@
     emptyState.hidden = has;
     calendar.style.display = has ? "" : "none";
     statsRow.style.display = has ? "" : "none";
+    monthNav.hidden = !(has && state.view === "month");
+    monthLabel.textContent = `${MONTH_FULL[state.month]} ${state.year}`;
 
     renderHeader();
     renderCalendar();
     updateRing(false);
     syncOrientToggle();
+    syncViewToggle();
   }
 
   function renderHeader() {
     const habit = currentHabit();
     const total = state.habits.length;
     yearLabel.textContent = state.year;
-    statYear.textContent = state.year;
+    const monthly = state.view === "month";
+    statYear.textContent = monthly ? MONTH_FULL[state.month] : state.year;
 
     if (!habit) {
       habitNameBtn.textContent = "No habits yet";
@@ -186,7 +212,7 @@
       return;
     }
     habitNameBtn.textContent = habit.name || "Untitled habit";
-    statDays.textContent = countDays(habit, state.year);
+    statDays.textContent = monthly ? countDaysInMonth(habit, state.year, state.month) : countDays(habit, state.year);
     const streak = currentStreak(habit);
     statStreak.textContent = streak;
     statStreak.parentElement.classList.toggle("hot", streak > 0);
@@ -201,46 +227,97 @@
     return c;
   }
 
-  function makeStar(habit, dateStr, label) {
+  function dateLabel(dateStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return `${MONTHS[m - 1]} ${d}, ${y}`;
+  }
+
+  function makeStar(habit, dateStr) {
     const star = document.createElement("button");
     star.className = "star";
     star.type = "button";
     star.dataset.date = dateStr;
-    star.setAttribute("aria-label", label);
+    star.setAttribute("aria-label", dateLabel(dateStr));
     if (habit.days[dateStr]) star.classList.add("done");
     if (dateStr === todayStr) star.classList.add("today");
     return star;
   }
 
+  // Describes the grid for the current view + orientation:
+  // counts, header labels, and the date string (or null) for each cell.
+  function calendarSpec() {
+    const y = state.year;
+    if (state.view === "month") {
+      const m = state.month;
+      const dim = daysInMonth(y, m);
+      const firstDay = new Date(y, m, 1).getDay(); // 0 = Sunday
+      const weeks = Math.ceil((firstDay + dim) / 7);
+      const dayAt = (weekday, week) => {
+        const dayNum = week * 7 + weekday - firstDay + 1;
+        return dayNum >= 1 && dayNum <= dim ? fmt(y, m, dayNum) : null;
+      };
+      if (state.orientation === "horizontal") {
+        // weekdays across the top, weeks down the side
+        return {
+          cols: 7, rows: weeks,
+          colHead: (c) => WEEKDAYS[c],
+          rowHead: (r) => String(r + 1),
+          dateAt: (c, r) => dayAt(c, r),
+        };
+      }
+      // vertical: weeks across the top, weekdays down the side
+      return {
+        cols: weeks, rows: 7,
+        colHead: (c) => String(c + 1),
+        rowHead: (r) => WEEKDAYS[r],
+        dateAt: (c, r) => dayAt(r, c),
+      };
+    }
+    // Year view
+    if (state.orientation === "horizontal") {
+      // days across the top, months down the side
+      return {
+        cols: 31, rows: 12,
+        colHead: (c) => String(c + 1),
+        rowHead: (r) => MONTHS[r],
+        dateAt: (c, r) => (c + 1 <= daysInMonth(y, r) ? fmt(y, r, c + 1) : null),
+      };
+    }
+    // vertical: months across the top, days down the side
+    return {
+      cols: 12, rows: 31,
+      colHead: (c) => MONTHS[c],
+      rowHead: (r) => String(r + 1),
+      dateAt: (c, r) => (r + 1 <= daysInMonth(y, c) ? fmt(y, c, r + 1) : null),
+    };
+  }
+
+  function gridSizing() {
+    if (state.view === "month") return { label: 30, min: 26, max: 64 };
+    if (state.orientation === "horizontal") return { label: 30, min: 15, max: 42 };
+    return { label: 22, min: 18, max: 46 }; // year vertical
+  }
+
   function renderCalendar() {
     cleanupShow(); // stop any running light show before rebuilding the grid
     const habit = currentHabit();
-    calendar.className = "calendar " + state.orientation;
+    calendar.className = "calendar " + state.view + " " + state.orientation;
     calendar.innerHTML = "";
     if (!habit) return;
 
+    const spec = calendarSpec();
+    const sz = gridSizing();
+    calendar.style.gridTemplateColumns = `${sz.label}px repeat(${spec.cols}, minmax(${sz.min}px, ${sz.max}px))`;
+
     const frag = document.createDocumentFragment();
     frag.appendChild(makeCell("cal-corner"));
-
-    if (state.orientation === "vertical") {
-      // Months across the top, days down the side.
-      MONTHS.forEach((m) => frag.appendChild(makeCell("col-head", m)));
-      for (let d = 1; d <= 31; d++) {
-        frag.appendChild(makeCell("row-head", d));
-        for (let m = 0; m < 12; m++) {
-          if (d > daysInMonth(state.year, m)) { frag.appendChild(makeCell("star empty")); continue; }
-          frag.appendChild(makeStar(habit, fmt(state.year, m, d), `${MONTHS[m]} ${d}`));
-        }
-      }
-    } else {
-      // Days across the top, months down the side.
-      for (let d = 1; d <= 31; d++) frag.appendChild(makeCell("col-head", d));
-      for (let m = 0; m < 12; m++) {
-        frag.appendChild(makeCell("row-head", MONTHS[m]));
-        for (let d = 1; d <= 31; d++) {
-          if (d > daysInMonth(state.year, m)) { frag.appendChild(makeCell("star empty")); continue; }
-          frag.appendChild(makeStar(habit, fmt(state.year, m, d), `${MONTHS[m]} ${d}`));
-        }
+    for (let c = 0; c < spec.cols; c++) frag.appendChild(makeCell("col-head", spec.colHead(c)));
+    for (let r = 0; r < spec.rows; r++) {
+      frag.appendChild(makeCell("row-head", spec.rowHead(r)));
+      for (let c = 0; c < spec.cols; c++) {
+        const dateStr = spec.dateAt(c, r);
+        if (!dateStr) { frag.appendChild(makeCell("star empty")); continue; }
+        frag.appendChild(makeStar(habit, dateStr));
       }
     }
     calendar.appendChild(frag);
@@ -588,13 +665,43 @@
   }
 
   function goToThisYear() {
-    if (state.year !== todayYear) {
-      state.year = todayYear;
+    let changed = false;
+    if (state.year !== todayYear) { state.year = todayYear; changed = true; }
+    if (state.view === "month" && state.month !== todayMonth) { state.month = todayMonth; changed = true; }
+    if (changed) {
       save();
       renderAll();
       if (!adminPanel.hidden) renderHabitList();
     }
     scrollToToday();
+  }
+
+  function changeMonth(delta) {
+    let m = state.month + delta;
+    let y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    else if (m > 11) { m = 0; y += 1; }
+    state.month = m;
+    state.year = y;
+    save();
+    renderAll();
+    if (!adminPanel.hidden) renderHabitList();
+  }
+
+  function setView(view) {
+    if (view !== "year" && view !== "month") return;
+    if (state.view === view) return;
+    state.view = view;
+    save();
+    renderAll();
+    syncViewToggle();
+    scrollToToday();
+  }
+
+  function syncViewToggle() {
+    viewToggle.querySelectorAll(".seg-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.view === state.view);
+    });
   }
 
   function setOrientation(orient) {
@@ -662,6 +769,7 @@
   function openAdmin() {
     renderHabitList();
     syncOrientToggle();
+    syncViewToggle();
     syncPastToggle();
     syncTimezone();
     adminOverlay.hidden = false;
@@ -893,6 +1001,7 @@
           ? data.orientation : defaultOrientation();
         data.editPast = data.editPast !== false;
         data.timezone = typeof data.timezone === "string" ? data.timezone : "auto";
+        normalizeView(data);
         state = data;
         refreshToday();
         wasComplete = isAllCompleteToday();
@@ -978,6 +1087,12 @@
     const btn = e.target.closest(".seg-btn");
     if (btn) setOrientation(btn.dataset.orient);
   });
+  viewToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg-btn");
+    if (btn) setView(btn.dataset.view);
+  });
+  el("prevMonth").addEventListener("click", () => changeMonth(-1));
+  el("nextMonth").addEventListener("click", () => changeMonth(1));
   pastToggle.addEventListener("click", () => setEditPast(!state.editPast));
   if (tzSelect) tzSelect.addEventListener("change", (e) => setTimezone(e.target.value));
 

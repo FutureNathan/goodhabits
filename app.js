@@ -298,7 +298,8 @@
     if (nowDone) {
       const allNow = isAllCompleteToday();
       if (allNow && !wasAllToday) {
-        starShowPlay("finale", 2300);
+        // Play this habit's themed show first, then roll into the finale.
+        starShowPlay(themeFor(habit.name), 1200, () => starShowPlay("finale", 2300));
       } else {
         starShowPlay(themeFor(habit.name), 1200);
       }
@@ -454,8 +455,8 @@
     showItems = null;
   }
 
-  function starShowPlay(key, duration) {
-    if (reduceMotion) return;
+  function starShowPlay(key, duration, onDone) {
+    if (reduceMotion) { if (typeof onDone === "function") onDone(); return; }
     const gen = SHOWS[key] || SHOWS.sparkle;
     const all = [...calendar.querySelectorAll(".star:not(.empty)")];
     if (!all.length) return;
@@ -498,7 +499,7 @@
         }
       }
       if (t < 1) showRAF = requestAnimationFrame(frame);
-      else cleanupShow();
+      else { cleanupShow(); if (typeof onDone === "function") onDone(); }
     }
     showRAF = requestAnimationFrame(frame);
   }

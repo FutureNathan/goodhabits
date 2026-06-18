@@ -744,6 +744,17 @@ button { font-family: inherit; cursor: pointer; }
   50% { transform: translateY(-5px) rotate(-2deg); }
 }
 
+/* Tiny build stamp — lets you confirm which version a device is actually
+   running (handy when a phone is serving a cached older build). */
+.build-stamp {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.05ms !important; }

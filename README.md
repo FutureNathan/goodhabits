@@ -41,8 +41,8 @@ when you finish them for the day. No account, no tracking, no servers.
   - Switch the calendar view (**yearly / monthly**) and direction
     (**vertical / horizontal**), lock past days from editing (so you only
     check off today), and **search** your **time zone** (by city or zone name)
-    so "today" is always correct — changing it waves a stylized flag of your
-    country across the stars.
+    so "today" is always correct — changing it waves your country's flag, in
+    real colours, across the stars.
   - **Download a backup** of all your habits and history, and **restore** one
     later — handy for moving between devices or browsers.
   - An **About** section with credits and a link to this open-source repo.
@@ -82,6 +82,7 @@ static files, so no build step or framework preset is needed.
 | `index.html` | Page structure + share/meta tags |
 | `styles.css` | All styling and animations |
 | `app.js` | App logic and local storage (no frameworks) |
+| `flags.js` | Time-zone → country mapping + flag data for the flag wave |
 | `404.html` | On-brand not-found page (served automatically by Vercel) |
 | `favicon.svg`, `apple-touch-icon.png` | Icons |
 | `og-image.png` | Social share image |

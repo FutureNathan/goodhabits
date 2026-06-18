@@ -426,22 +426,32 @@
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
-  // Wrap a flag "sampler" (normalized u,v -> 'o' orange / 'w' white / '' off)
-  // into a show generator that wipes the flag in, gives it a gentle wave, and
-  // renders it in the app's orange/white/gray palette.
-  function flagShow(sampler) {
+  // ---- Country flag wave (real colours, from flags.js) ----
+  const FLAGS_LIB = window.GoodHabitsFlags || null;
+  // Returns a show generator that returns a COLOR string per cell (or "" = off):
+  // wipes the flag in from the left, waves gently, then dissolves out.
+  function flagGen(spec) {
     return function (c, r, t, W, H) {
       const u0 = W > 1 ? c / (W - 1) : 0.5;
       const v = H > 1 ? r / (H - 1) : 0.5;
-      const reveal = Math.min(1, t / 0.32);
-      if (u0 > reveal) return 0;
-      const u = Math.min(0.999, Math.max(0, u0 + 0.045 * Math.sin(v * 6 + t * 7)));
-      const s = sampler(u, v);
-      return s === "w" ? 0.95 : s === "o" ? 0.5 : 0;
+      if (u0 > Math.min(1, t / 0.3)) return ""; // reveal wipe
+      if (t > 0.82) {
+        const fade = 1 - (t - 0.82) / 0.18;
+        const h = Math.sin(c * 12.9898 + r * 78.233) * 43758.5453;
+        if (h - Math.floor(h) > fade) return ""; // sparkly dissolve out
+      }
+      const u = Math.min(0.999, Math.max(0, u0 + 0.04 * Math.sin(v * 6 + t * 7)));
+      return FLAGS_LIB ? FLAGS_LIB.flagColorAt(spec, u, v) : "#ff5a2e";
     };
   }
+  function flagGenForTz(tz) {
+    const cc = FLAGS_LIB ? FLAGS_LIB.tzCountry(tz) : null;
+    const spec = FLAGS_LIB ? FLAGS_LIB.specForCountry(cc) : { t: "wave" };
+    return flagGen(spec);
+  }
 
-  // Each generator returns 0..1 brightness for cell (c,r) on a W×H grid at time t (0..1).
+  // Each generator returns 0..1 brightness (themed/finale) or a colour string
+  // (flags) for cell (c,r) on a W×H grid at time t (0..1).
   const SHOWS = {
     water(c, r, t, W, H) {
       const fill = easeOut(Math.min(1, t * 1.05));
@@ -520,59 +530,7 @@
       }
       return v;
     },
-
-    // Stylized national flags (orange/white/gray), keyed by time zone below.
-    fVert3: flagShow((u, v) => (Math.floor(Math.min(0.999, u) * 3) === 1 ? "w" : "o")),
-    fHoriz3: flagShow((u, v) => (Math.floor(Math.min(0.999, v) * 3) === 1 ? "w" : "o")),
-    fNordic: flagShow((u, v) => (Math.abs(u - 0.34) < 0.09 || Math.abs(v - 0.5) < 0.11 ? "w" : "o")),
-    fSun: flagShow((u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.2 ? "o" : "")),
-    fCrescent: flagShow((u, v) => {
-      const d1 = Math.hypot(u - 0.4, v - 0.5), d2 = Math.hypot(u - 0.49, v - 0.5);
-      if (d1 < 0.22 && d2 > 0.18) return "w";
-      if (Math.hypot(u - 0.6, v - 0.5) < 0.055) return "w";
-      return "o";
-    }),
-    fUSA: flagShow((u, v) => {
-      if (u < 0.4 && v < 0.54) return "w";
-      return Math.floor(Math.min(0.999, v) * 7) % 2 === 0 ? "o" : "";
-    }),
-    fCanada: flagShow((u, v) => {
-      if (u < 0.26 || u > 0.74) return "o";
-      return Math.hypot(u - 0.5, v - 0.5) < 0.13 ? "o" : "w";
-    }),
-    fUK: flagShow((u, v) => {
-      if (Math.abs(u - 0.5) < 0.09 || Math.abs(v - 0.5) < 0.11) return "w";
-      if (Math.min(Math.abs(u - v), Math.abs(u - (1 - v))) < 0.09) return "o";
-      return "";
-    }),
-    fChina: flagShow((u, v) => {
-      if (Math.hypot(u - 0.2, v - 0.3) < 0.08) return "w";
-      if (Math.hypot(u - 0.34, v - 0.18) < 0.04) return "w";
-      if (Math.hypot(u - 0.37, v - 0.3) < 0.04) return "w";
-      if (Math.hypot(u - 0.34, v - 0.42) < 0.04) return "w";
-      if (Math.hypot(u - 0.27, v - 0.5) < 0.04) return "w";
-      return "o";
-    }),
-    fGeneric: flagShow((u, v) => (Math.abs(v - (0.5 + 0.16 * Math.sin(u * 6.2))) < 0.13 ? "w" : "o")),
   };
-
-  // Time zone -> flag generator key (curated; falls back to a generic banner).
-  const FLAG_BY_TZ = {};
-  (function () {
-    const m = {
-      fUSA: ["America/New_York", "America/Detroit", "America/Chicago", "America/Denver", "America/Boise", "America/Phoenix", "America/Los_Angeles", "America/Anchorage", "America/Adak", "Pacific/Honolulu", "America/Indiana/Indianapolis", "America/Indianapolis", "America/Kentucky/Louisville"],
-      fCanada: ["America/Toronto", "America/Vancouver", "America/Edmonton", "America/Winnipeg", "America/Halifax", "America/St_Johns", "America/Regina", "America/Montreal"],
-      fVert3: ["America/Mexico_City", "America/Cancun", "America/Tijuana", "Europe/Paris", "Europe/Rome", "Europe/Dublin", "Europe/Lisbon", "Asia/Dubai"],
-      fHoriz3: ["Europe/Berlin", "Europe/Amsterdam", "Europe/Madrid", "Europe/Moscow", "Asia/Yekaterinburg", "Asia/Novosibirsk", "Asia/Vladivostok", "Asia/Kolkata", "Asia/Calcutta", "America/Argentina/Buenos_Aires"],
-      fNordic: ["Europe/Stockholm", "Europe/Oslo", "Europe/Copenhagen", "Europe/Helsinki", "Atlantic/Reykjavik"],
-      fSun: ["Asia/Tokyo", "Asia/Dhaka"],
-      fCrescent: ["Europe/Istanbul", "Asia/Istanbul", "Asia/Karachi", "Asia/Singapore", "Asia/Kuala_Lumpur"],
-      fUK: ["Europe/London"],
-      fChina: ["Asia/Shanghai", "Asia/Chongqing", "Asia/Urumqi", "Asia/Hong_Kong"],
-    };
-    for (const key in m) for (const tz of m[key]) FLAG_BY_TZ[tz] = key;
-  })();
-  const flagFor = (tz) => FLAG_BY_TZ[tz] || "fGeneric";
 
   let showRAF = 0;
   let showItems = null; // stars currently participating in a show
@@ -596,13 +554,17 @@
     if (showRAF) cancelAnimationFrame(showRAF);
     showRAF = 0;
     calendar.classList.remove("showing");
-    calendar.querySelectorAll(".show-on, .show-hi").forEach((s) => s.classList.remove("show-on", "show-hi"));
+    calendar.querySelectorAll(".show-lit").forEach((s) => {
+      s.classList.remove("show-lit");
+      s.style.removeProperty("--sc");
+    });
     showItems = null;
   }
 
-  function starShowPlay(key, duration, onDone) {
+  const ACCENT = "#ff5a2e";
+  function starShowPlay(keyOrGen, duration, onDone) {
     if (reduceMotion) { if (typeof onDone === "function") onDone(); return; }
-    const gen = SHOWS[key] || SHOWS.sparkle;
+    const gen = typeof keyOrGen === "function" ? keyOrGen : (SHOWS[keyOrGen] || SHOWS.sparkle);
     const all = [...calendar.querySelectorAll(".star:not(.empty)")];
     if (!all.length) return;
 
@@ -624,7 +586,7 @@
     cleanupShow();
     calendar.classList.add("showing");
     showItems = use;
-    const last = new Array(use.length).fill(0); // 0 none, 1 on, 2 hi
+    const last = new Array(use.length).fill(""); // last colour token per star ("" = off)
 
     let start = null;
     function frame(ts) {
@@ -633,14 +595,21 @@
       const fade = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
       for (let k = 0; k < use.length; k++) {
         const m = use[k];
-        const inten = gen(m.col, m.row, t, GW, GH) * fade;
-        const desired = inten > 0.8 ? 2 : inten > 0.18 ? 1 : 0;
-        if (desired !== last[k]) {
-          const cl = m.el.classList;
-          if (desired === 2) { cl.add("show-hi"); cl.remove("show-on"); }
-          else if (desired === 1) { cl.add("show-on"); cl.remove("show-hi"); }
-          else { cl.remove("show-on", "show-hi"); }
-          last[k] = desired;
+        const val = gen(m.col, m.row, t, GW, GH);
+        let color;
+        if (typeof val === "string") color = val; // flag colour or ""
+        else {
+          const inten = val * fade; // themed/finale intensity -> orange/white
+          color = inten > 0.8 ? "#ffffff" : inten > 0.18 ? ACCENT : "";
+        }
+        if (color !== last[k]) {
+          if (color) {
+            m.el.style.setProperty("--sc", color);
+            if (!last[k]) m.el.classList.add("show-lit");
+          } else {
+            m.el.classList.remove("show-lit");
+          }
+          last[k] = color;
         }
       }
       if (t < 1) showRAF = requestAnimationFrame(frame);
@@ -884,7 +853,7 @@
     renderAll();
     if (!adminPanel.hidden) renderHabitList();
     // Close Settings so the country's flag wave is visible right away.
-    pendingFlag = flagFor(activeTz());
+    pendingFlag = flagGenForTz(activeTz());
     closeAdmin();
   }
 

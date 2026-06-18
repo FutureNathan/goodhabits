@@ -319,19 +319,17 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* Light show — temporarily repaints the EXISTING calendar stars (no new stars).
-   While a show runs, every star dims to gray; the animation lights a subset. */
+   While a show runs, every star dims to gray; the animation lights a subset.
+   Lit stars take their colour from the per-star --sc variable (orange/white for
+   the habit/finale shows, real flag colours for the time-zone flag wave). */
 .calendar.showing .star::before {
   background: var(--star-off);
   filter: none;
   transition: none;
 }
-.calendar.showing .star.show-on::before {
-  background: var(--accent);
-  filter: drop-shadow(0 0 4px rgba(255, 90, 46, 0.6));
-}
-.calendar.showing .star.show-hi::before {
-  background: #fff;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.75));
+.calendar.showing .star.show-lit::before {
+  background: var(--sc, var(--accent));
+  filter: drop-shadow(0 0 3px var(--sc, rgba(255, 90, 46, 0.6)));
 }
 
 /* Locked (past day, editing disabled) — quick shake to signal it's locked */

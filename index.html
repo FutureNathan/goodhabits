@@ -177,9 +177,12 @@
           <button class="seg-btn" type="button" data-view="month">Monthly</button>
         </div>
       </div>
-      <div class="toggle-row">
-        <span class="toggle-label">Time zone</span>
-        <select class="tz-select" id="tzSelect" aria-label="Time zone"></select>
+      <div class="admin-field">
+        <label class="toggle-label" for="tzInput">Time zone</label>
+        <div class="tz-combo" id="tzCombo">
+          <input type="text" id="tzInput" class="tz-input" role="combobox" aria-expanded="false" aria-controls="tzList" aria-autocomplete="list" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Search city or time zone…" />
+          <ul class="tz-list" id="tzList" role="listbox" aria-label="Time zones" hidden></ul>
+        </div>
       </div>
     </div>
 

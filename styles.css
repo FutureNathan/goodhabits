@@ -498,21 +498,58 @@ button { font-family: inherit; cursor: pointer; }
 }
 .switch[aria-checked="true"] .knob { transform: translateX(20px); }
 
-/* Time-zone select */
-.tz-select {
-  max-width: 200px;
+/* Time-zone search combobox */
+.admin-field { display: flex; flex-direction: column; gap: 8px; }
+.tz-combo { position: relative; }
+.tz-input {
+  width: 100%;
   background: var(--bg-soft);
   border: 1px solid var(--line);
   color: var(--text);
-  padding: 9px 10px;
-  border-radius: 10px;
-  font-size: 13px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  font-size: 16px; /* 16px keeps iOS Safari from zooming in on focus */
   font-family: inherit;
   outline: none;
-  cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.tz-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tz-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tz-input::placeholder { color: var(--muted-2); }
+.tz-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 6;
+  max-height: 244px;
+  overflow-y: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.tz-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.tz-opt.active { background: var(--accent-soft); }
+.tz-opt[aria-selected="true"] .tz-opt-name { color: var(--accent); font-weight: 700; }
+.tz-opt-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tz-opt-off { color: var(--muted-2); font-size: 12px; font-variant-numeric: tabular-nums; flex: none; }
+.tz-empty { padding: 10px 11px; color: var(--muted-2); font-size: 14px; }
+@media (hover: hover) { .tz-opt:hover { background: var(--accent-soft); } }
 .seg { display: inline-flex; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 11px; padding: 3px; gap: 3px; }
 .seg-btn {
   border: none;

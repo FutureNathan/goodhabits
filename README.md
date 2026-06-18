@@ -40,8 +40,9 @@ when you finish them for the day. No account, no tracking, no servers.
   - Switch years with the `‹ 2026 ›` control (plus a "This year" shortcut).
   - Switch the calendar view (**yearly / monthly**) and direction
     (**vertical / horizontal**), lock past days from editing (so you only
-    check off today), and set your **time zone** so "today" is always correct —
-    changing it waves a stylized flag of your country across the stars.
+    check off today), and **search** your **time zone** (by city or zone name)
+    so "today" is always correct — changing it waves a stylized flag of your
+    country across the stars.
   - **Download a backup** of all your habits and history, and **restore** one
     later — handy for moving between devices or browsers.
   - An **About** section with credits and a link to this open-source repo.

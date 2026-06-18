@@ -36,7 +36,8 @@
   const viewToggle = el("viewToggle");
   const monthNav = el("monthNav");
   const monthLabel = el("monthLabel");
-  const tzSelect = el("tzSelect");
+  const tzInput = el("tzInput");
+  const tzList = el("tzList");
   const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ---------- Date helpers ----------
@@ -737,21 +738,143 @@
     "Africa/Cairo", "Asia/Dubai", "Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo",
     "Australia/Sydney", "Pacific/Auckland",
   ];
-  function populateTimezones() {
-    if (!tzSelect) return;
+  let TZ_ZONES = null;
+  function tzZones() {
+    if (TZ_ZONES) return TZ_ZONES;
     let zones = [];
     try { if (typeof Intl.supportedValuesOf === "function") zones = Intl.supportedValuesOf("timeZone"); } catch (e) {}
     if (!zones || !zones.length) zones = FALLBACK_TZS;
-    let html = `<option value="auto">Auto — ${deviceTz.replace(/_/g, " ")}</option>`;
-    for (const z of zones) html += `<option value="${z}">${z.replace(/_/g, " ")}</option>`;
-    tzSelect.innerHTML = html;
-    syncTimezone(zones);
+    TZ_ZONES = zones;
+    return zones;
   }
-  function syncTimezone(zones) {
-    if (!tzSelect) return;
+  const tzPretty = (z) => z.replace(/_/g, " ");
+
+  // Extra search terms (nicknames, old/new city names, country names) so the
+  // search is forgiving — e.g. "nyc", "kolkata" vs "calcutta", "kyiv" vs "kiev".
+  const TZ_ALIAS = {
+    "America/New_York": "nyc new york city eastern usa",
+    "America/Chicago": "central usa",
+    "America/Denver": "mountain usa",
+    "America/Los_Angeles": "la pacific california usa",
+    "America/Phoenix": "arizona usa",
+    "Pacific/Honolulu": "hawaii usa",
+    "America/Anchorage": "alaska usa",
+    "America/Toronto": "canada",
+    "America/Sao_Paulo": "brazil brasil",
+    "America/Mexico_City": "mexico",
+    "Europe/London": "uk england britain gmt",
+    "Europe/Paris": "france",
+    "Europe/Berlin": "germany",
+    "Europe/Madrid": "spain",
+    "Europe/Rome": "italy",
+    "Europe/Moscow": "russia",
+    "Europe/Kyiv": "kiev ukraine",
+    "Europe/Kiev": "kyiv ukraine",
+    "Europe/Istanbul": "constantinople turkey",
+    "Asia/Istanbul": "constantinople turkey",
+    "Asia/Tokyo": "japan",
+    "Asia/Shanghai": "china beijing",
+    "Asia/Hong_Kong": "china",
+    "Asia/Kolkata": "calcutta india",
+    "Asia/Calcutta": "kolkata india",
+    "Asia/Ho_Chi_Minh": "saigon vietnam",
+    "Asia/Saigon": "ho chi minh vietnam",
+    "Asia/Yangon": "rangoon myanmar burma",
+    "Asia/Rangoon": "yangon myanmar burma",
+    "Asia/Dubai": "uae emirates",
+    "Asia/Karachi": "pakistan",
+    "Asia/Singapore": "singapore",
+    "Australia/Sydney": "australia",
+    "Pacific/Auckland": "new zealand nz",
+  };
+
+  let TZ_INDEX = null;
+  function tzIndex() {
+    if (TZ_INDEX) return TZ_INDEX;
+    TZ_INDEX = tzZones().map((z) => {
+      const label = tzPretty(z);
+      const alias = TZ_ALIAS[z] ? " " + TZ_ALIAS[z] : "";
+      return { value: z, label, search: (label + alias).toLowerCase() };
+    });
+    return TZ_INDEX;
+  }
+  function tzCurrentLabel() {
     const cur = state.timezone || "auto";
-    const list = zones || [...tzSelect.options].map((o) => o.value);
-    tzSelect.value = cur !== "auto" && list.indexOf(cur) !== -1 ? cur : "auto";
+    return cur === "auto" ? `Auto — ${tzPretty(deviceTz)}` : tzPretty(cur);
+  }
+  function tzOffset(z) {
+    const tz = z === "auto" ? deviceTz : z;
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(new Date());
+      const p = parts.find((x) => x.type === "timeZoneName");
+      return p ? p.value : "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  let tzMatches = [];
+  let tzActive = -1;
+  function renderTzList(query) {
+    const q = (query || "").trim().toLowerCase();
+    const cur = state.timezone || "auto";
+    const results = [];
+    const autoLabel = `Auto — ${tzPretty(deviceTz)}`;
+    if (!q || "auto".includes(q) || autoLabel.toLowerCase().includes(q)) {
+      results.push({ value: "auto", label: autoLabel });
+    }
+    const idx = tzIndex();
+    for (let i = 0; i < idx.length && results.length < 60; i++) {
+      if (!q || idx[i].search.includes(q)) results.push({ value: idx[i].value, label: idx[i].label });
+    }
+    tzMatches = results;
+
+    if (!results.length) {
+      tzList.innerHTML = '<li class="tz-empty" aria-disabled="true">No matching time zone</li>';
+      tzActive = -1;
+      return;
+    }
+    tzActive = Math.max(0, results.findIndex((r) => r.value === cur));
+    tzList.innerHTML = results
+      .map((r, i) => {
+        const off = tzOffset(r.value);
+        return (
+          `<li class="tz-opt${i === tzActive ? " active" : ""}" role="option" data-value="${r.value}" aria-selected="${r.value === cur}">` +
+          `<span class="tz-opt-name">${r.label}</span>` +
+          (off ? `<span class="tz-opt-off">${off}</span>` : "") +
+          "</li>"
+        );
+      })
+      .join("");
+    const activeLi = tzList.children[tzActive];
+    if (activeLi) activeLi.scrollIntoView({ block: "nearest" });
+  }
+  function openTzList(query) {
+    renderTzList(query != null ? query : "");
+    tzList.hidden = false;
+    tzInput.setAttribute("aria-expanded", "true");
+  }
+  function closeTzList() {
+    tzList.hidden = true;
+    tzInput.setAttribute("aria-expanded", "false");
+    tzActive = -1;
+  }
+  function moveTzActive(delta) {
+    if (!tzMatches.length) return;
+    tzActive = (tzActive + delta + tzMatches.length) % tzMatches.length;
+    const lis = tzList.querySelectorAll(".tz-opt");
+    lis.forEach((li, i) => li.classList.toggle("active", i === tzActive));
+    if (lis[tzActive]) lis[tzActive].scrollIntoView({ block: "nearest" });
+  }
+  let tzBlurTimer = null;
+  function chooseTz(value) {
+    if (tzBlurTimer) { clearTimeout(tzBlurTimer); tzBlurTimer = null; }
+    closeTzList();
+    tzInput.blur();
+    setTimezone(value); // updates state, waves the flag, and closes Settings
+  }
+  function syncTimezone() {
+    if (tzInput) tzInput.value = tzCurrentLabel();
   }
   let pendingFlag = null;
   function setTimezone(tz) {
@@ -1094,7 +1217,29 @@
   el("prevMonth").addEventListener("click", () => changeMonth(-1));
   el("nextMonth").addEventListener("click", () => changeMonth(1));
   pastToggle.addEventListener("click", () => setEditPast(!state.editPast));
-  if (tzSelect) tzSelect.addEventListener("change", (e) => setTimezone(e.target.value));
+
+  // Time-zone search combobox
+  if (tzInput && tzList) {
+    tzInput.addEventListener("focus", () => {
+      if (tzBlurTimer) { clearTimeout(tzBlurTimer); tzBlurTimer = null; }
+      tzInput.select();
+      openTzList("");
+    });
+    tzInput.addEventListener("input", () => openTzList(tzInput.value));
+    tzInput.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); if (tzList.hidden) openTzList(tzInput.value); else moveTzActive(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); moveTzActive(-1); }
+      else if (e.key === "Enter") { e.preventDefault(); if (tzMatches[tzActive]) chooseTz(tzMatches[tzActive].value); }
+      else if (e.key === "Escape") { e.stopPropagation(); closeTzList(); tzInput.value = tzCurrentLabel(); tzInput.blur(); }
+    });
+    tzInput.addEventListener("blur", () => {
+      tzBlurTimer = setTimeout(() => { tzBlurTimer = null; closeTzList(); tzInput.value = tzCurrentLabel(); }, 150);
+    });
+    tzList.addEventListener("click", (e) => {
+      const li = e.target.closest(".tz-opt");
+      if (li) chooseTz(li.dataset.value);
+    });
+  }
 
   el("exportBtn").addEventListener("click", exportData);
   el("importBtn").addEventListener("click", () => el("importFile").click());
@@ -1116,7 +1261,7 @@
 
   // ---------- Init ----------
   buildStarfield();
-  populateTimezones();
+  syncTimezone();
   renderAll();
   // Start scrolled to the top so the month/day headers are visible on landing.
   calendarArea.scrollTop = 0;

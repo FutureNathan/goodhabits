@@ -325,27 +325,12 @@ button { font-family: inherit; cursor: pointer; }
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
 }
 
-/* Light show — the moving "wave of light" is painted on a separate <canvas>
-   overlay (built in app.js), so the REAL stars are never repainted and can
-   never be left in a wrong state. While a show runs, the real stars dim via a
-   self-reverting CSS animation: even if the show's JavaScript cleanup never
-   fires (e.g. iOS Safari throttling rAF/timers), the animation finishes on its
-   own and every star returns to its true colour — a completed day can never be
-   left looking gray. The per-show duration is set inline via --show-dur. */
-.calendar.showing .star::before {
-  animation: starDim var(--show-dur, 1200ms) ease;
-  transition: none;
-}
-@keyframes starDim {
-  0%   { filter: grayscale(0.92) brightness(0.5); }
-  10%  { filter: grayscale(0.92) brightness(0.42); }
-  80%  { filter: grayscale(0.92) brightness(0.42); }
-  100% { filter: grayscale(0) brightness(1); }
-}
-
-/* The canvas the wave is drawn on. It fades itself out with CSS, so a frozen
-   frame (rAF stalled) can only ever fade to fully transparent — it can never
-   stay covering the calendar. Sits above the stars, below the settings panel. */
+/* Light show — the REAL stars are NEVER touched by a show. They only ever
+   change colour when you tap them, so a completed day can never be left looking
+   gray no matter what the animation does (no dimming, no cleanup to fail). The
+   whole "wave of light" is painted on a separate, purely-additive <canvas>
+   overlay (built in app.js) that only ADDS glints on top and then clears
+   itself. Sits above the stars, below the settings panel. */
 .show-canvas {
   position: fixed;
   pointer-events: none;

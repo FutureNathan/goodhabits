@@ -365,6 +365,8 @@
       star.classList.add("locked");
       return;
     }
+    cleanupShow(); // clear any leftover sparkle from a previous tap right away
+
     const wasAllToday = isAllCompleteToday();
     const nowDone = !habit.days[dateStr];
     if (nowDone) habit.days[dateStr] = true;
@@ -564,7 +566,6 @@
   function cleanupShow() {
     if (showRAF) cancelAnimationFrame(showRAF);
     showRAF = 0;
-    calendar.classList.remove("showing");
     showCanvas.classList.remove("playing");
     const ctx = showCanvas.getContext("2d");
     if (ctx) ctx.clearRect(0, 0, showCanvas.width, showCanvas.height);
@@ -633,12 +634,10 @@
     const ctx = showCanvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Kick off the two self-reverting CSS animations: the real stars dim, and
-    // the canvas fades. Set the duration, then restart with a reflow.
-    calendar.style.setProperty("--show-dur", duration + "ms");
+    // Start the canvas fade. The real stars are never touched. Restart the CSS
+    // fade with a reflow so a rapid second show animates from the top.
     showCanvas.style.setProperty("--show-dur", duration + "ms");
-    void calendar.offsetWidth;
-    calendar.classList.add("showing");
+    void showCanvas.offsetWidth;
     showCanvas.classList.add("playing");
 
     const myToken = ++showToken;

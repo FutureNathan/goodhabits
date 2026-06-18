@@ -534,6 +534,7 @@
 
   let showRAF = 0;
   let showItems = null; // stars currently participating in a show
+  let showToken = 0; // identifies the active show run (for the cleanup watchdog)
 
   function uniqSorted(vals, tol) {
     const sorted = [...vals].sort((a, b) => a - b);
@@ -585,6 +586,7 @@
 
     cleanupShow();
     calendar.classList.add("showing");
+    const myToken = ++showToken;
     showItems = use;
     const last = new Array(use.length).fill(""); // last colour token per star ("" = off)
 
@@ -616,6 +618,10 @@
       else { cleanupShow(); if (typeof onDone === "function") onDone(); }
     }
     showRAF = requestAnimationFrame(frame);
+    // Safety net: never let the dimming "showing" state get stuck (which would
+    // leave a just-completed star looking gray), even if the rAF loop is
+    // interrupted (tab backgrounded, throttled, etc.).
+    setTimeout(() => { if (showToken === myToken) cleanupShow(); }, duration + 600);
   }
 
   // ---------- Navigation ----------

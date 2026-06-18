@@ -254,24 +254,25 @@ button { font-family: inherit; cursor: pointer; }
   font-variant-numeric: tabular-nums;
 }
 
-.cal-corner { position: sticky; top: 0; left: 0; z-index: 3; background: var(--bg); }
+/* Sticky headers stay opaque & above the stars so titles are always readable */
+.cal-corner { position: sticky; top: 0; left: 0; z-index: 6; background: var(--bg); }
 
 .col-head {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 5;
   text-align: center;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted);
-  padding: 2px 0 8px;
-  background: linear-gradient(180deg, var(--bg) 64%, transparent);
+  padding: 4px 0 8px;
+  background: var(--bg);
 }
 .row-head {
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -294,6 +295,7 @@ button { font-family: inherit; cursor: pointer; }
   align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* no double-tap-zoom -> no phantom double clicks */
   scroll-margin: 60px 44px;
 }
 .star::before {

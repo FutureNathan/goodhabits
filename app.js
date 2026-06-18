@@ -653,8 +653,9 @@
     refreshToday();
     renderAll();
     if (!adminPanel.hidden) renderHabitList();
-    // Wave the country's flag once Settings closes (so it's visible).
+    // Close Settings so the country's flag wave is visible right away.
     pendingFlag = flagFor(activeTz());
+    closeAdmin();
   }
 
   // ---------- Settings / admin panel ----------

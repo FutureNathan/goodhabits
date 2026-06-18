@@ -668,9 +668,6 @@ button { font-family: inherit; cursor: pointer; }
   50% { transform: translateY(-5px) rotate(-2deg); }
 }
 
-/* Confetti */
-#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.05ms !important; }

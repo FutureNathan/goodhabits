@@ -32,7 +32,6 @@
   const orientToggle = el("orientToggle");
   const pastToggle = el("pastToggle");
   const tzSelect = el("tzSelect");
-  const confettiCanvas = el("confetti");
   const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ---------- Date helpers ----------
@@ -300,7 +299,6 @@
       const allNow = isAllCompleteToday();
       if (allNow && !wasAllToday) {
         starShowPlay("finale", 2300);
-        celebrate();
       } else {
         starShowPlay(themeFor(habit.name), 1200);
       }
@@ -832,63 +830,6 @@
     reader.readAsText(file);
   }
 
-  // ---------- Confetti celebration ----------
-  let confettiCtx = null;
-  function celebrate() {
-    if (!confettiCanvas.getContext) return;
-    confettiCtx = confettiCtx || confettiCanvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    confettiCanvas.width = window.innerWidth * dpr;
-    confettiCanvas.height = window.innerHeight * dpr;
-    confettiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const colors = ["#ff5a2e", "#ff8a4c", "#ffb38a", "#ffffff"];
-    const parts = [];
-    for (let i = 0; i < 140; i++) {
-      parts.push({
-        x: W / 2 + (Math.random() - 0.5) * 120,
-        y: H * 0.26,
-        vx: (Math.random() - 0.5) * 11,
-        vy: Math.random() * -10 - 5,
-        size: 4 + Math.random() * 6,
-        color: colors[(Math.random() * colors.length) | 0],
-        rot: Math.random() * Math.PI,
-        vr: (Math.random() - 0.5) * 0.3,
-        life: 1,
-      });
-    }
-    let start = null;
-    function frame(ts) {
-      if (!start) start = ts;
-      const elapsed = ts - start;
-      confettiCtx.clearRect(0, 0, W, H);
-      let alive = false;
-      for (const p of parts) {
-        p.vy += 0.28;
-        p.vx *= 0.99;
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rot += p.vr;
-        p.life = Math.max(0, 1 - elapsed / 2200);
-        if (p.life > 0 && p.y < H + 30) {
-          alive = true;
-          confettiCtx.save();
-          confettiCtx.globalAlpha = p.life;
-          confettiCtx.translate(p.x, p.y);
-          confettiCtx.rotate(p.rot);
-          confettiCtx.fillStyle = p.color;
-          confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
-          confettiCtx.restore();
-        }
-      }
-      if (alive) requestAnimationFrame(frame);
-      else confettiCtx.clearRect(0, 0, W, H);
-    }
-    requestAnimationFrame(frame);
-  }
-
   // ---------- Scroll to today ----------
   function scrollToToday() {
     if (state.year !== todayYear) return;
@@ -979,13 +920,6 @@
     if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
     if (e.key === "ArrowLeft") goHabit(-1);
     if (e.key === "ArrowRight") goHabit(1);
-  });
-
-  window.addEventListener("resize", () => {
-    if (confettiCtx) {
-      confettiCanvas.width = window.innerWidth * (window.devicePixelRatio || 1);
-      confettiCanvas.height = window.innerHeight * (window.devicePixelRatio || 1);
-    }
   });
 
   // ---------- Init ----------

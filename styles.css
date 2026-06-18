@@ -325,36 +325,40 @@ button { font-family: inherit; cursor: pointer; }
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
 }
 
-/* Light show — temporarily repaints the EXISTING calendar stars (no new stars).
-   While a show runs, every star dims to gray; the animation lights a subset.
-   Lit stars take their colour from the per-star --sc variable (orange/white for
-   the habit/finale shows, real flag colours for the time-zone flag wave). */
+/* Light show — the moving "wave of light" is painted on a separate <canvas>
+   overlay (built in app.js), so the REAL stars are never repainted and can
+   never be left in a wrong state. While a show runs, the real stars dim via a
+   self-reverting CSS animation: even if the show's JavaScript cleanup never
+   fires (e.g. iOS Safari throttling rAF/timers), the animation finishes on its
+   own and every star returns to its true colour — a completed day can never be
+   left looking gray. The per-show duration is set inline via --show-dur. */
 .calendar.showing .star::before {
-  background: var(--star-off);
-  filter: none;
+  animation: starDim var(--show-dur, 1200ms) ease;
   transition: none;
 }
-.calendar.showing .star.show-lit::before {
-  background: var(--sc, var(--accent));
-  filter: drop-shadow(0 0 3px var(--sc, rgba(255, 90, 46, 0.6)));
+@keyframes starDim {
+  0%   { filter: grayscale(0.92) brightness(0.5); }
+  10%  { filter: grayscale(0.92) brightness(0.42); }
+  80%  { filter: grayscale(0.92) brightness(0.42); }
+  100% { filter: grayscale(0) brightness(1); }
 }
 
-/* The star you just tapped keeps showing its real state through the show
-   instead of dimming with the rest of the calendar, so a tap on today always
-   reads as a clean white (today) <-> orange (done) toggle — never a lingering
-   gray. These sit after .show-lit so they win for the pinned star. */
-.calendar.showing .star.pinned::before {
-  background: var(--star-off);
-  filter: none;
-  transition: none;
+/* The canvas the wave is drawn on. It fades itself out with CSS, so a frozen
+   frame (rAF stalled) can only ever fade to fully transparent — it can never
+   stay covering the calendar. Sits above the stars, below the settings panel. */
+.show-canvas {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 10;
 }
-.calendar.showing .star.pinned.today:not(.done)::before {
-  background: #fff;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
+.show-canvas.playing {
+  animation: showCanvasFade var(--show-dur, 1200ms) linear;
 }
-.calendar.showing .star.pinned.done::before {
-  background: var(--accent);
-  filter: drop-shadow(0 0 4px rgba(255, 90, 46, 0.55));
+@keyframes showCanvasFade {
+  0%   { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Locked (past day, editing disabled) — quick shake to signal it's locked */

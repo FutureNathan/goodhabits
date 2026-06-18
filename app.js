@@ -17,6 +17,13 @@
   const el = (id) => document.getElementById(id);
   const calendar = el("calendar");
   const calendarArea = el("calendarArea");
+  // Overlay the light show is painted on (kept separate from the real stars so
+  // the stars are never repainted — see starShowPlay). Created in JS so there's
+  // nothing to wire up in the HTML.
+  const showCanvas = document.createElement("canvas");
+  showCanvas.className = "show-canvas";
+  showCanvas.setAttribute("aria-hidden", "true");
+  document.body.appendChild(showCanvas);
   const emptyState = el("emptyState");
   const statsRow = el("statsRow");
   const habitNameBtn = el("habitName");
@@ -181,6 +188,7 @@
 
   // ---------- Rendering ----------
   function renderAll() {
+    cleanupShow(); // cancel any in-flight show when the view changes
     state.currentIndex = clampIndex(state.currentIndex, state.habits.length);
     const has = state.habits.length > 0;
     emptyState.hidden = has;
@@ -363,15 +371,6 @@
     else delete habit.days[dateStr];
 
     star.classList.toggle("done", nowDone);
-
-    // Keep the tapped star showing its true state (white = today, orange = done)
-    // above the light show's dimming, so a tap is always a clean toggle and
-    // never looks like it "turned gray". cleanupShow() deliberately leaves
-    // "pinned" alone so it holds through the themed-show -> finale chain; the
-    // next tap (below) or a re-render clears it.
-    calendar.querySelectorAll(".star.pinned").forEach((s) => s.classList.remove("pinned"));
-    star.classList.add("pinned");
-
     star.classList.remove("pop");
     void star.offsetWidth;
     star.classList.add("pop");
@@ -542,8 +541,7 @@
   };
 
   let showRAF = 0;
-  let showItems = null; // stars currently participating in a show
-  let showToken = 0; // identifies the active show run (for the cleanup watchdog)
+  let showToken = 0; // identifies the active show run
 
   function uniqSorted(vals, tol) {
     const sorted = [...vals].sort((a, b) => a - b);
@@ -560,49 +558,90 @@
     return bi;
   }
 
+  // Best-effort teardown. Nothing here is required for correctness: the real
+  // stars un-dim and the canvas fades out on their own via CSS animations, so
+  // even if this never runs the calendar still returns to its true colours.
   function cleanupShow() {
     if (showRAF) cancelAnimationFrame(showRAF);
     showRAF = 0;
     calendar.classList.remove("showing");
-    calendar.querySelectorAll(".show-lit").forEach((s) => {
-      s.classList.remove("show-lit");
-      s.style.removeProperty("--sc");
-    });
-    showItems = null;
+    showCanvas.classList.remove("playing");
+    const ctx = showCanvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, showCanvas.width, showCanvas.height);
   }
 
   const ACCENT = "#ff5a2e";
+  // A 5-point star matching the CSS clip-path, as 0..100 coordinates.
+  const STAR_PTS = [[50, 2], [61, 35], [98, 35], [68, 57], [79, 91], [50, 70], [21, 91], [32, 57], [2, 35], [39, 35]];
+  function drawStar(ctx, x, y, size, color, alpha) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * 0.5;
+    ctx.beginPath();
+    for (let i = 0; i < STAR_PTS.length; i++) {
+      const px = x + (STAR_PTS[i][0] / 100 - 0.5) * size;
+      const py = y + (STAR_PTS[i][1] / 100 - 0.5) * size;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
   function starShowPlay(keyOrGen, duration, onDone) {
     if (reduceMotion) { if (typeof onDone === "function") onDone(); return; }
     const gen = typeof keyOrGen === "function" ? keyOrGen : (SHOWS[keyOrGen] || SHOWS.sparkle);
     const all = [...calendar.querySelectorAll(".star:not(.empty)")];
-    if (!all.length) return;
+    if (!all.length) { if (typeof onDone === "function") onDone(); return; }
 
-    // Prefer the stars currently visible in the calendar viewport, so the
-    // show always plays where you're looking.
+    // Snapshot star positions (in viewport coords) once, up front.
     const area = calendarArea.getBoundingClientRect();
-    const measured = all.map((el) => {
-      const r = el.getBoundingClientRect();
-      return { el, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+    // Sticky month/weekday labels — don't paint the wave over them.
+    const colH = calendar.querySelector(".col-head");
+    const rowH = calendar.querySelector(".row-head");
+    const clipX = rowH ? Math.max(0, rowH.getBoundingClientRect().right - area.left) : 0;
+    const clipY = colH ? Math.max(0, colH.getBoundingClientRect().bottom - area.top) : 0;
+
+    const measured = all.map((node) => {
+      const r = node.getBoundingClientRect();
+      return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: r.width };
     });
+    // Prefer the stars currently in view, so the show plays where you're looking.
     let use = measured.filter((m) => m.cy >= area.top - 2 && m.cy <= area.bottom + 2 && m.cx >= area.left - 2 && m.cx <= area.right + 2);
     if (use.length < 6) use = measured;
 
     const cols = uniqSorted(use.map((m) => m.cx), 8);
     const rows = uniqSorted(use.map((m) => m.cy), 8);
     const GW = cols.length, GH = rows.length;
-    use.forEach((m) => { m.col = nearestIndex(cols, m.cx); m.row = nearestIndex(rows, m.cy); });
+    use.forEach((m) => {
+      m.col = nearestIndex(cols, m.cx);
+      m.row = nearestIndex(rows, m.cy);
+      m.lx = m.cx - area.left; // canvas-local position
+      m.ly = m.cy - area.top;
+    });
 
     cleanupShow();
-    calendar.classList.add("showing");
-    const myToken = ++showToken;
-    showItems = use;
-    const last = new Array(use.length).fill(""); // last colour token per star ("" = off)
 
-    // finish() removes the dim "showing" state and runs onDone exactly once.
-    // It is driven by BOTH the rAF loop (when it runs) and a setTimeout, so the
-    // just-completed star always lights up at the end of its animation even if
-    // iOS Safari pauses/throttles requestAnimationFrame during touch.
+    // Size + place the canvas over the calendar's current viewport.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    showCanvas.style.left = area.left + "px";
+    showCanvas.style.top = area.top + "px";
+    showCanvas.style.width = area.width + "px";
+    showCanvas.style.height = area.height + "px";
+    showCanvas.width = Math.max(1, Math.round(area.width * dpr));
+    showCanvas.height = Math.max(1, Math.round(area.height * dpr));
+    const ctx = showCanvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Kick off the two self-reverting CSS animations: the real stars dim, and
+    // the canvas fades. Set the duration, then restart with a reflow.
+    calendar.style.setProperty("--show-dur", duration + "ms");
+    showCanvas.style.setProperty("--show-dur", duration + "ms");
+    void calendar.offsetWidth;
+    calendar.classList.add("showing");
+    showCanvas.classList.add("playing");
+
+    const myToken = ++showToken;
     let finished = false;
     function finish() {
       if (finished || showToken !== myToken) return;
@@ -614,33 +653,38 @@
     let start = null;
     function frame(ts) {
       if (finished || showToken !== myToken) return; // superseded or already done
-      if (!start) start = ts;
+      if (start === null) start = ts;
       const t = Math.min(1, (ts - start) / duration);
       const fade = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
+      ctx.clearRect(0, 0, area.width, area.height);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clipX, clipY, area.width - clipX, area.height - clipY);
+      ctx.clip();
       for (let k = 0; k < use.length; k++) {
         const m = use[k];
         const val = gen(m.col, m.row, t, GW, GH);
-        let color;
-        if (typeof val === "string") color = val; // flag colour or ""
-        else {
+        let color, alpha;
+        if (typeof val === "string") {
+          if (!val) continue; // flag colour, or "" = off
+          color = val; alpha = 1;
+        } else {
           const inten = val * fade; // themed/finale intensity -> orange/white
-          color = inten > 0.8 ? "#ffffff" : inten > 0.18 ? ACCENT : "";
+          if (inten < 0.12) continue;
+          color = inten > 0.8 ? "#ffffff" : ACCENT;
+          alpha = Math.min(1, inten * 1.15);
         }
-        if (color !== last[k]) {
-          if (color) {
-            m.el.style.setProperty("--sc", color);
-            if (!last[k]) m.el.classList.add("show-lit");
-          } else {
-            m.el.classList.remove("show-lit");
-          }
-          last[k] = color;
-        }
+        drawStar(ctx, m.lx, m.ly, m.size, color, alpha);
       }
+      ctx.restore();
       if (t < 1) showRAF = requestAnimationFrame(frame);
       else finish();
     }
     showRAF = requestAnimationFrame(frame);
-    setTimeout(finish, duration + 120); // reliable cleanup regardless of rAF
+    // Safety nets for the onDone callback (the finale chain) only. The CSS
+    // animations handle the visual reset regardless of whether these fire.
+    showCanvas.addEventListener("animationend", finish, { once: true });
+    setTimeout(finish, duration + 150);
   }
 
   // ---------- Navigation ----------
